@@ -8,11 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <script src="https://cdn.amcharts.com/lib/4/core.js"></script>
-    <script src="https://cdn.amcharts.com/lib/4/maps.js"></script>
-    <script src="https://cdn.amcharts.com/lib/4/geodata/japanLow.js"></script>
-    <script src="https://cdn.amcharts.com/lib/4/themes/animated.js"></script>
-    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -150,8 +145,18 @@
                     <div class="h-96 flex items-center justify-center"><canvas id="call-type-chart"></canvas></div>
                 </div>
                 <div class="col-span-12 lg:col-span-8 card p-6">
-                    <h2 class="text-xl font-semibold accent-text mb-4" data-lang-key="areaMapTitle">人気配達エリア（クリックで詳細表示）</h2>
-                    <div id="japan-heatmap-chart" class="h-96 cursor-pointer"></div>
+                    <h2 class="text-xl font-semibold accent-text mb-4" data-lang-key="areaMapTitle">人気配達エリア</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 h-96">
+                        <div class="h-full">
+                            <canvas id="tokyo-barchart"></canvas>
+                        </div>
+                        <div class="overflow-y-auto">
+                            <table class="styled-table">
+                                <thead id="area-details-table-head"></thead>
+                                <tbody id="area-details-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-span-12 lg:col-span-8 card p-6">
                     <h2 class="text-xl font-semibold accent-text mb-4" data-lang-key="arrivalTineTitle">入客時間帯</h2>
@@ -188,6 +193,8 @@
                                     <th data-sort="repeatCount"><span data-lang-key="repeatCountCol">被リピート数</span><span class="sort-arrow"></span></th>
                                     <th data-sort="repeatRate"><span data-lang-key="repeatRateCol">リピート率</span><span class="sort-arrow"></span></th>
                                     <th data-sort="optionRate"><span data-lang-key="optionRateCol">オプション付与率</span><span class="sort-arrow"></span></th>
+                                    <th data-sort="hamanoCustomerCount"><span data-lang-key="hamanoCountCol">濱野経由数</span><span class="sort-arrow"></span></th>
+                                    <th data-sort="hamanoRate"><span data-lang-key="hamanoRateCol">濱野経由率</span><span class="sort-arrow"></span></th>
                                 </tr>
                             </thead>
                             <tbody id="cast-performance-table"></tbody>
@@ -217,14 +224,6 @@
     </div>
 
     <!-- Modals -->
-    <div id="tokyo-modal" class="modal-overlay">
-        <div class="card modal-content w-full max-w-4xl h-full max-h-[80vh] p-6 flex flex-col relative">
-            <button data-close-modal="tokyo-modal" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-10"><i class="fas fa-times fa-2x"></i></button>
-            <h2 class="text-xl font-semibold accent-text mb-4" data-lang-key="tokyoModalTitle">東京都内 配達エリア ランキング</h2>
-            <div class="flex-grow h-full"><canvas id="tokyo-barchart"></canvas></div>
-        </div>
-    </div>
-
     <div id="ward-detail-modal" class="modal-overlay">
         <div class="card modal-content w-full max-w-6xl h-full max-h-[90vh] p-6 flex flex-col relative">
             <button data-close-modal="ward-detail-modal" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-10"><i class="fas fa-times fa-2x"></i></button>
@@ -328,10 +327,14 @@
                 tempLine = tempLine.replace(/"/g, '').replace(/, ,/g, ',').replace(/,,/g, ',');
                 const parts = tempLine.split(',').map(p => p.trim());
                 if (parts.length >= 8) {
+                    let source = parts[5] || '不明';
+                    if (source.includes('濱野マイ客') || source.includes('濱野引き') || source.includes('濱野マイ客紹介')) {
+                        source = '濱野経由';
+                    }
                     customerRecords.push({
                         date: recordDate, time: parts[0] || '', castName: (parts[1] || '').split('(')[0].trim(),
                         race: (parts[2] || '不明').trim(), callInfo: parts[3] || '', payment: parseInt(parts[4], 10) || 0,
-                        source: parts[5] || '不明', duration: parseInt(parts[6], 10) || 0, payout: parseInt(parts[7], 10) || 0,
+                        source: source, duration: parseInt(parts[6], 10) || 0, payout: parseInt(parts[7], 10) || 0,
                         options: foundOptions, repeatSourceCast: (parts[8] || '').split('(')[0].trim() || null
                     });
                 }
@@ -402,9 +405,9 @@
         
         function updateAllSections(overallData, customerData, isAnnualView) {
             updateKpis(overallData);
-            createPerformanceCharts(overallData, isAnnualView);
+            createPerformanceCharts(overallData, customerData, isAnnualView);
             createCallTypeChart(customerData);
-            createJapanHeatmap(customerData);
+            createAreaAnalysisSection(customerData);
             createArrivalTimeChart(customerData);
             createSourceRatioChart(customerData);
             createCastPerformanceSection(customerData);
@@ -425,10 +428,11 @@
         }
 
         // --- Chart & Table Rendering ---
-        function createPerformanceCharts(data, isAnnualView) {
+        function createPerformanceCharts(overallData, customerData, isAnnualView) {
             const keyFn = isAnnualView ? r => { const d = getCorrectDate(r['日付']); return d ? `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}` : null; } : r => r['日付'];
             const sortFn = isAnnualView ? (a, b) => new Date(a) - new Date(b) : (a, b) => getCorrectDate(a) - getCorrectDate(b);
-            const aggregated = data.reduce((acc, row) => {
+            
+            const aggregated = overallData.reduce((acc, row) => {
                 const key = keyFn(row); if (!key) return acc;
                 if (!acc[key]) acc[key] = { sales: 0, profit: 0, cost: 0, customers: 0, repeaters: 0 };
                 const customers = parseInt(String(row['客数']).replace(/,/g, ''), 10) || 0;
@@ -439,7 +443,17 @@
                 acc[key].repeaters += Math.round(customers * (parseFloat(String(row['リピーター率']).replace('%', '')) / 100 || 0));
                 return acc;
             }, {});
+
             const sortedKeys = Object.keys(aggregated).sort(sortFn);
+
+            sortedKeys.forEach(key => {
+                const periodData = isAnnualView
+                    ? customerData.filter(c => c.date && `${c.date.getFullYear()}-${(c.date.getMonth() + 1).toString().padStart(2, '0')}` === key)
+                    : customerData.filter(c => c.date && getCorrectDate(key) && c.date.getTime() === getCorrectDate(key).getTime());
+                
+                aggregated[key].hamanoCustomers = periodData.filter(c => c.source === '濱野経由').length;
+            });
+
             const labels = sortedKeys.map(k => {
                 if (isAnnualView) {
                     const [year, month] = k.split('-');
@@ -454,8 +468,9 @@
             ]);
             renderStandardChart('profitBarChart', 'bar', labels, [{ label: translations[currentLang].profitLabel, data: sortedKeys.map(k => aggregated[k].profit), backgroundColor: 'rgba(244, 114, 182, 0.7)' }], formatYen);
             renderStandardChart('customersTrendChart', 'bar', labels, [
+                { label: translations[currentLang].newCustomersLabel, data: sortedKeys.map(k => aggregated[k].customers - aggregated[k].repeaters - aggregated[k].hamanoCustomers), backgroundColor: 'rgba(229, 231, 235, 0.7)' },
                 { label: translations[currentLang].repeatersLabel, data: sortedKeys.map(k => aggregated[k].repeaters), backgroundColor: '#f9a8d4' },
-                { label: translations[currentLang].newCustomersLabel, data: sortedKeys.map(k => aggregated[k].customers - aggregated[k].repeaters), backgroundColor: 'rgba(229, 231, 235, 0.7)' }
+                { label: translations[currentLang].hamanoSource, data: sortedKeys.map(k => aggregated[k].hamanoCustomers), backgroundColor: '#67e8f9' }
             ], val => val.toLocaleString());
         }
         
@@ -468,81 +483,64 @@
             renderChart('call-type-chart', 'doughnut', Object.keys(callTypes).map(t => translateData(t)), [{ data: Object.values(callTypes) }], v => `${v}${translations[currentLang].caseSuffix}`);
         }
 
-        function createJapanHeatmap(data) {
+        function createAreaAnalysisSection(data) {
             const tokyo23Wards = ['千代田区', '中央区', '港区', '新宿区', '文京区', '台東区', '墨田区', '江東区', '品川区', '目黒区', '大田区', '世田谷区', '渋谷区', '中野区', '杉並区', '豊島区', '北区', '荒川区', '板橋区', '練馬区', '足立区', '葛飾区', '江戸川区'];
-            const prefectureIdMap = {'北海道': 'JP-01', '青森県': 'JP-02', '岩手県': 'JP-03', '宮城県': 'JP-04', '秋田県': 'JP-05', '山形県': 'JP-06', '福島県': 'JP-07', '茨城県': 'JP-08', '栃木県': 'JP-09', '群馬県': 'JP-10', '埼玉県': 'JP-11', '千葉県': 'JP-12', '東京都': 'JP-13', '神奈川県': 'JP-14', '新潟県': 'JP-15', '富山県': 'JP-16', '石川県': 'JP-17', '福井県': 'JP-18', '山梨県': 'JP-19', '長野県': 'JP-20', '岐阜県': 'JP-21', '静岡県': 'JP-22', '愛知県': 'JP-23', '三重県': 'JP-24', '滋賀県': 'JP-25', '京都府': 'JP-26', '大阪府': 'JP-27', '兵庫県': 'JP-28', '奈良県': 'JP-29', '和歌山県': 'JP-30', '鳥取県': 'JP-31', '島根県': 'JP-32', '岡山県': 'JP-33', '広島県': 'JP-34', '山口県': 'JP-35', '徳島県': 'JP-36', '香川県': 'JP-37', '愛媛県': 'JP-38', '高知県': 'JP-39', '福岡県': 'JP-40', '佐賀県': 'JP-41', '長崎県': 'JP-42', '熊本県': 'JP-43', '大分県': 'JP-44', '宮崎県': 'JP-45', '鹿児島県': 'JP-46', '沖縄県': 'JP-47'};
-            const areaCounts = data.filter(c => c.callInfo.startsWith('アウトコール')).reduce((acc, c) => {
-                const area = c.callInfo.split(' ')[1]; if (!area) return acc;
-                let prefecture = tokyo23Wards.includes(area) ? '東京都' : (prefectureIdMap[area] ? area : null);
-                if (prefecture) acc[prefecture] = (acc[prefecture] || 0) + 1;
+            const tokyoData = data.filter(c => c.callInfo.startsWith('アウトコール') && tokyo23Wards.some(ward => c.callInfo.includes(ward)));
+            
+            const areaStats = tokyoData.reduce((acc, c) => {
+                const area = tokyo23Wards.find(ward => c.callInfo.includes(ward));
+                if (area) {
+                    if (!acc[area]) {
+                        acc[area] = { customers: [], totalPayment: 0 };
+                    }
+                    acc[area].customers.push(c);
+                    acc[area].totalPayment += c.payment;
+                }
                 return acc;
             }, {});
-            const mapData = Object.keys(areaCounts).map(prefecture => ({ id: prefectureIdMap[prefecture], name: prefecture, value: areaCounts[prefecture] }));
-            if (window.japanMapChart) window.japanMapChart.dispose();
-            const chart = am4core.create("japan-heatmap-chart", am4maps.MapChart);
-            window.japanMapChart = chart;
-            chart.geodata = am4geodata_japanLow;
-            chart.projection = new am4maps.projections.Mercator();
-            const polygonSeries = chart.series.push(new am4maps.MapPolygonSeries());
-            polygonSeries.useGeodata = true;
-            polygonSeries.data = mapData;
-            const polygonTemplate = polygonSeries.mapPolygons.template;
-            polygonTemplate.tooltipText = "{name}: {value}"+translations[currentLang].caseSuffix;
-            polygonTemplate.fill = am4core.color("#4b5563");
-            polygonTemplate.events.on("hit", ev => {
-                if (ev.target.dataItem.dataContext.name === '東京都') {
-                    document.getElementById('tokyo-modal').classList.add('visible');
-                    const tokyoData = currentFilteredData.filter(c => tokyo23Wards.includes(c.callInfo.split(' ')[1]));
-                    createTokyoBarChartInModal(tokyoData);
-                }
-            });
-            polygonSeries.heatRules.push({ property: "fill", target: polygonTemplate, min: am4core.color("#fda4af"), max: am4core.color("#db2777"), logarithmic: true });
-            chart.background.fillOpacity = 0;
+
+            const sortedAreas = Object.entries(areaStats)
+                .map(([area, stats]) => {
+                    const customersWithOptions = stats.customers.filter(c => c.options.length > 0).length;
+                    const hamanoCustomers = stats.customers.filter(c => c.source === '濱野経由').length;
+                    return {
+                        area,
+                        customerCount: stats.customers.length,
+                        avgPayment: stats.customers.length > 0 ? stats.totalPayment / stats.customers.length : 0,
+                        optionRate: stats.customers.length > 0 ? customersWithOptions / stats.customers.length : 0,
+                        hamanoRate: stats.customers.length > 0 ? hamanoCustomers / stats.customers.length : 0,
+                    };
+                })
+                .sort((a, b) => b.customerCount - a.customerCount);
+
+            const labels = sortedAreas.map(area => translateData(area.area));
+            const chartData = sortedAreas.map(area => area.customerCount);
+
+            renderChart('tokyo-barchart', 'bar', labels, [{ label: translations[currentLang].deliveryCount, data: chartData, backgroundColor: 'rgba(244, 114, 182, 0.7)' }], v => `${v}${translations[currentLang].caseSuffix}`, true);
+            renderAreaDetailsTable(sortedAreas);
         }
 
-        function createTokyoBarChartInModal(data) {
-            const areaCounts = data.reduce((acc, c) => {
-                const area = c.callInfo.split(' ')[1];
-                if (area) acc[area] = (acc[area] || 0) + 1;
-                return acc;
-            }, {});
-            const sortedAreas = Object.entries(areaCounts).sort(([,a],[,b]) => a - b);
-            const labels = sortedAreas.map(([area]) => translateData(area));
-            if (window.tokyoModalBarChart) window.tokyoModalBarChart.destroy();
-            const ctx = document.getElementById('tokyo-barchart').getContext('2d');
-            window.tokyoModalBarChart = new Chart(ctx, {
-                type: 'bar', data: { labels, datasets: [{ label: translations[currentLang].deliveryCount, data: sortedAreas.map(([,count]) => count), backgroundColor: 'rgba(244, 114, 182, 0.7)' }] },
-                options: {
-                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                    onClick: (event, elements) => {
-                        if (elements.length > 0) {
-                            const wardName = sortedAreas[elements[0].index][0];
-                            const wardData = currentFilteredData.filter(c => c.callInfo.includes(wardName));
-                            showWardDetailModal(wardName, wardData);
-                        }
-                    },
-                    scales: { x: { beginAtZero: true, ticks: { color: '#fbcfe8', precision: 0 }, grid: { color: 'rgba(244, 114, 182, 0.2)' } }, y: { ticks: { color: '#fce7f3' }, grid: { color: 'rgba(244, 114, 182, 0.2)' } } },
-                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${c.raw}${translations[currentLang].caseSuffix}` } } }
-                }
-            });
+        function renderAreaDetailsTable(data) {
+            const tableHead = document.getElementById('area-details-table-head');
+            const tableBody = document.getElementById('area-details-table-body');
+            tableHead.innerHTML = `<tr>
+                <th>${translations[currentLang].areaNameCol}</th>
+                <th>${translations[currentLang].totalCustomersCol}</th>
+                <th>${translations[currentLang].avgPaymentCol}</th>
+                <th>${translations[currentLang].optionRateCol}</th>
+                <th>${translations[currentLang].hamanoRateCol}</th>
+            </tr>`;
+            tableBody.innerHTML = data.map(d => `
+                <tr class="clickable" data-ward-name="${d.area}">
+                    <td class="font-semibold">${translateData(d.area)}</td>
+                    <td>${d.customerCount}</td>
+                    <td>${formatYen(d.avgPayment)}</td>
+                    <td class="accent-text font-bold">${formatPercent(d.optionRate)}</td>
+                    <td class="accent-text font-bold">${formatPercent(d.hamanoRate)}</td>
+                </tr>
+            `).join('');
         }
 
-        function showWardDetailModal(wardName, wardData) {
-            document.getElementById('ward-modal-name').textContent = translateData(wardName);
-            const totalCustomers = wardData.length;
-            const totalPayment = wardData.reduce((sum, c) => sum + c.payment, 0);
-            document.getElementById('ward-kpi-customers').textContent = totalCustomers;
-            document.getElementById('ward-kpi-payment').textContent = formatYen(totalPayment);
-            document.getElementById('ward-kpi-avg-payment').textContent = formatYen(totalCustomers > 0 ? totalPayment / totalCustomers : 0);
-            const raceCounts = wardData.reduce((acc, c) => { acc[c.race || '不明'] = (acc[c.race || '不明'] || 0) + 1; return acc; }, {});
-            renderChart('ward-race-chart', 'doughnut', Object.keys(raceCounts).map(r => translateData(r)), [{ data: Object.values(raceCounts) }], v => `${v}${translations[currentLang].caseSuffix}`);
-            const optionsCount = wardData.flatMap(c => c.options).reduce((acc, option) => { acc[option] = (acc[option] || 0) + 1; return acc; }, {});
-            const sortedOptions = Object.entries(optionsCount).sort(([,a],[,b]) => a - b).slice(-10);
-            renderChart('ward-options-chart', 'bar', sortedOptions.map(([opt]) => translateData(opt)), [{ label: translations[currentLang].selectionCount, data: sortedOptions.map(([,cnt]) => cnt) }], v => `${v}${translations[currentLang].timesSuffix}`, true);
-            const sourceCounts = wardData.reduce((acc, c) => { acc[c.source || '不明'] = (acc[c.source || '不明'] || 0) + 1; return acc; }, {});
-            renderChart('ward-source-chart', 'doughnut', Object.keys(sourceCounts).map(s => translateData(s)), [{ data: Object.values(sourceCounts) }], v => `${v}${translations[currentLang].caseSuffix}`);
-            document.getElementById('ward-detail-modal').classList.add('visible');
-        }
 
         function createArrivalTimeChart(data) {
             const businessHours = ['18', '19', '20', '21', '22', '23', '00', '01', '02', '03', '04'];
@@ -567,12 +565,15 @@
             data.forEach(c => {
                 if (!c.castName) return;
                 if (!currentCastStats[c.castName]) {
-                    currentCastStats[c.castName] = { customerCount: 0, totalPayout: 0, repeatCount: 0, optionCustomerCount: 0 };
+                    currentCastStats[c.castName] = { customerCount: 0, totalPayout: 0, repeatCount: 0, optionCustomerCount: 0, hamanoCustomerCount: 0 };
                 }
                 currentCastStats[c.castName].customerCount++;
                 currentCastStats[c.castName].totalPayout += c.payout;
                 if (c.options.length > 0) {
                     currentCastStats[c.castName].optionCustomerCount++;
+                }
+                if (c.source === '濱野経由') {
+                    currentCastStats[c.castName].hamanoCustomerCount++;
                 }
             });
             data.forEach(c => {
@@ -594,6 +595,7 @@
                 avgPayout: stats.customerCount > 0 ? stats.totalPayout / stats.customerCount : 0,
                 repeatRate: stats.customerCount > 0 ? stats.repeatCount / stats.customerCount : 0,
                 optionRate: stats.customerCount > 0 ? stats.optionCustomerCount / stats.customerCount : 0,
+                hamanoRate: stats.customerCount > 0 ? stats.hamanoCustomerCount / stats.customerCount : 0,
             })).sort((a, b) => (currentSort.direction === 'asc' ? 1 : -1) * (a[currentSort.key] > b[currentSort.key] ? 1 : -1));
             
             tableBody.innerHTML = sortedData.map(stats => `
@@ -605,6 +607,8 @@
                     <td>${stats.repeatCount}</td>
                     <td class="accent-text font-bold">${formatPercent(stats.repeatRate)}</td>
                     <td class="accent-text font-bold">${formatPercent(stats.optionRate)}</td>
+                    <td>${stats.hamanoCustomerCount}</td>
+                    <td class="accent-text font-bold">${formatPercent(stats.hamanoRate)}</td>
                 </tr>`).join('');
 
             document.querySelectorAll('#cast-table-head th').forEach(th => {
@@ -635,6 +639,8 @@
                 <th>${translations[currentLang].topSourceCol}</th>
                 <th>${translations[currentLang].topOptionCol}</th>
                 <th>${translations[currentLang].optionRateCol}</th>
+                <th>${translations[currentLang].hamanoCountCol}</th>
+                <th>${translations[currentLang].hamanoRateCol}</th>
             </tr>`;
             tableBody.innerHTML = Object.keys(dataByLabel).sort().map(label => generateAnalysisRow(label, dataByLabel[label], isAnnualView)).join('');
         }
@@ -648,6 +654,8 @@
             const topOption = Object.entries(optionCounts).sort(([,a],[,b]) => b-a)[0]?.[0] || 'N/A';
             const customersWithOptions = data.filter(c => c.options.length > 0).length;
             const optionRate = data.length > 0 ? customersWithOptions / data.length : 0;
+            const hamanoCustomers = data.filter(c => c.source === '濱野経由').length;
+            const hamanoRate = data.length > 0 ? hamanoCustomers / data.length : 0;
             const formattedLabel = isAnnualView ? translations[currentLang].yearMonth.replace('{year}', label.split('-')[0]).replace('{month}', parseInt(label.split('-')[1], 10)) : translateData(label);
             return `<tr class="clickable" data-label="${label}" data-is-annual="${isAnnualView}">
                 <td class="font-semibold">${formattedLabel}</td>
@@ -656,7 +664,9 @@
                 <td>${formatYen(totalPayment / data.length)}</td>
                 <td>${translateData(topSource)}</td>
                 <td>${translateData(topOption)}</td>
-                <td>${formatPercent(optionRate)}</td>
+                <td class="accent-text font-bold">${formatPercent(optionRate)}</td>
+                <td>${hamanoCustomers}</td>
+                <td class="accent-text font-bold">${formatPercent(hamanoRate)}</td>
             </tr>`;
         }
         
@@ -675,16 +685,16 @@
         // --- Language & Event Listeners ---
         const translations = {
             'ja': {
-                mainTitle: "TokyoGirlsHub 総合分析", subTitle: "統合パフォーマンスダッシュボード", refreshBtn: "更新", navAll: "すべて表示", navCustomer: "顧客動向", navCast: "キャスト分析", navRace: "人種別分析", kpiSales: "売上合計", kpiProfit: "粗利合計", kpiCost: "原価合計", kpiCustomers: "客数合計", kpiMarginRate: "粗利率", kpiAvgSpend: "平均客単価", salesTrendTitle: "売上・原価・粗利率 推移", salesLabel: "売上", costLabel: "原価", marginRateLabel: "粗利率", profitTrendTitle: "粗利推移", customerTrendTitle: "客数推移（新規・リピーター）", callTypeTitle: "コール種別 比率", areaMapTitle: "人気配達エリア（クリックで詳細表示）", arrivalTineTitle: "入客時間帯", sourceRatioTitle: "経由元 比率", castPerfTitle: "キャスト パフォーマンス", kpiTotalPayout: "女子給 合計", kpiAvgPayout: "1人あたり平均女子給", castNameCol: "キャスト名", totalCustomersCol: "総客数", totalPayoutCol: "女子給合計", avgPayoutCol: "客単価女子給", repeatCountCol: "被リピート数", repeatRateCol: "リピート率", raceAnalysisTitle: "人種別 分析", tokyoModalTitle: "東京都内 配達エリア ランキング", wardModalTitle: "詳細分析", totalPaymentCol: "総支払額", avgPaymentCol: "平均支払額", raceRatioTitle: "人種比率", topOptionsTitle: "人気オプション", sourceTitle: "経由元", periodDataTitle: "期間別データ", sourceRankingTitle: "経由元ランキング", topOptionsRankingTitle: "人気オプションランキング", annualData: "年間データ", yearMonth: "{year}年{month}月", profitLabel: "粗利", repeatersLabel: "リピーター", newCustomersLabel: "新規顧客", deliveryCount: "配達件数", caseSuffix: "件", selectionCount: "選択回数", timesSuffix: "回", customerCount: "客数", peopleSuffix: "人", monthCol: "月", raceCol: "人種", avgStayCol: "平均滞在時間", topSourceCol: "人気経由元", topOptionCol: "人気オプション", minSuffix: "分", dateCol: "日付", periodCol: "期間", optionRateCol: "オプション付与率",
-                data: { "日本": "日本", "イラマチオ": "イラマチオ", "インコール": "インコール", "アウトコール": "アウトコール", "不明": "不明", "日本人": "日本人", "中国人": "中国人", "韓国人": "韓国人", "台湾人": "台湾人", "フィリピン人": "フィリピン人", "タイ人": "タイ人", "ベトナム人": "ベトナム人", "その他": "その他", "HP": "HP", "リピ": "リピ", "紹介": "紹介", "X": "X", "Instagram": "Instagram", "TikTok": "TikTok", "オナニー鑑賞": "オナニー鑑賞", "電マ/バイブ": "電マ/バイブ", "聖水": "聖水", "足コキ": "足コキ", "即尺": "即尺", "アナル舐め": "アナル舐め", "パンツ持ち帰り": "パンツ持ち帰り", "パンスト破り": "パンスト破り", "コスプレ": "コスプレ", "ごっくん": "ごっくん", "3P": "3P", "顔射": "顔射", "2回戦(60分限定)": "2回戦(60分限定)", "写真動画撮影": "写真動画撮影", "AF": "AF", "N/A": "該当なし", "千代田区": "千代田区", "中央区": "中央区", "港区": "港区", "新宿区": "新宿区", "文京区": "文京区", "台東区": "台東区", "墨田区": "墨田区", "江東区": "江東区", "品川区": "品川区", "目黒区": "目黒区", "大田区": "大田区", "世田谷区": "世田谷区", "渋谷区": "渋谷区", "中野区": "中野区", "杉並区": "杉並区", "豊島区": "豊島区", "北区": "北区", "荒川区": "荒川区", "板橋区": "板橋区", "練馬区": "練馬区", "足立区": "足立区", "葛飾区": "葛飾区", "江戸川区": "江戸川区", "アメリカ": "アメリカ", "イギリス": "イギリス", "カナダ": "カナダ", "シンガポール": "シンガポール", "メキシコ": "メキシコ", "ヨーロッパ系": "ヨーロッパ系", "中東系": "中東系", "香港": "香港", "外販": "外販", "Web予約": "Web予約", "Echoさん経由": "Echoさん経由", "該当なし": "該当なし", "中国": "中国", "韓国": "韓国", "台湾": "台湾", "姫予約": "姫予約", "渡邊さん経由": "渡邊さん経由", "渡辺さん経由": "渡辺さん経由", "飛び込み": "飛び込み", "マイ客": "マイ客", "濱野マイ客": "濱野マイ客", "カイマイ客": "カイマイ客", "マーカスマイ客": "マーカスマイ客", "香港Discord": "香港Discord", "リピーター": "リピーター", "濱野マイ客紹介": "濱野マイ客紹介", "濱野引き": "濱野引き", "渡辺さんマイ客": "渡辺さんマイ客", "ロシア": "ロシア", "インド": "インド", "タイ": "タイ", "ドバイ": "ドバイ", "トルコ": "トルコ" }
+                mainTitle: "TokyoGirlsHub 総合分析", subTitle: "統合パフォーマンスダッシュボード", refreshBtn: "更新", navAll: "すべて表示", navCustomer: "顧客動向", navCast: "キャスト分析", navRace: "人種別分析", kpiSales: "売上合計", kpiProfit: "粗利合計", kpiCost: "原価合計", kpiCustomers: "客数合計", kpiMarginRate: "粗利率", kpiAvgSpend: "平均客単価", salesTrendTitle: "売上・原価・粗利率 推移", salesLabel: "売上", costLabel: "原価", marginRateLabel: "粗利率", profitTrendTitle: "粗利推移", customerTrendTitle: "客数推移（新規・リピーター）", callTypeTitle: "コール種別 比率", areaMapTitle: "人気配達エリア", areaNameCol: "エリア名", hamanoCountCol: "濱野経由数", arrivalTineTitle: "入客時間帯", sourceRatioTitle: "経由元 比率", castPerfTitle: "キャスト パフォーマンス", kpiTotalPayout: "女子給 合計", kpiAvgPayout: "1人あたり平均女子給", castNameCol: "キャスト名", totalCustomersCol: "総客数", totalPayoutCol: "女子給合計", avgPayoutCol: "客単価女子給", repeatCountCol: "被リピート数", repeatRateCol: "リピート率", raceAnalysisTitle: "人種別 分析", tokyoModalTitle: "東京都内 配達エリア ランキング", wardModalTitle: "詳細分析", totalPaymentCol: "総支払額", avgPaymentCol: "平均支払額", raceRatioTitle: "人種比率", topOptionsTitle: "人気オプション", sourceTitle: "経由元", periodDataTitle: "期間別データ", sourceRankingTitle: "経由元ランキング", topOptionsRankingTitle: "人気オプションランキング", annualData: "年間データ", yearMonth: "{year}年{month}月", profitLabel: "粗利", repeatersLabel: "リピーター", newCustomersLabel: "新規顧客", deliveryCount: "配達件数", caseSuffix: "件", selectionCount: "選択回数", timesSuffix: "回", customerCount: "客数", peopleSuffix: "人", monthCol: "月", raceCol: "人種", avgStayCol: "平均滞在時間", topSourceCol: "人気経由元", topOptionCol: "人気オプション", minSuffix: "分", dateCol: "日付", periodCol: "期間", optionRateCol: "オプション付与率", hamanoRateCol: "濱野経由率", hamanoSource: "濱野経由",
+                data: { "日本": "日本", "イラマチオ": "イラマチオ", "インコール": "インコール", "アウトコール": "アウトコール", "不明": "不明", "日本人": "日本人", "中国人": "中国人", "韓国人": "韓国人", "台湾人": "台湾人", "フィリピン人": "フィリピン人", "タイ人": "タイ人", "ベトナム人": "ベトナム人", "その他": "その他", "HP": "HP", "リピ": "リピ", "紹介": "紹介", "X": "X", "Instagram": "Instagram", "TikTok": "TikTok", "オナニー鑑賞": "オナニー鑑賞", "電マ/バイブ": "電マ/バイブ", "聖水": "聖水", "足コキ": "足コキ", "即尺": "即尺", "アナル舐め": "アナル舐め", "パンツ持ち帰り": "パンツ持ち帰り", "パンスト破り": "パンスト破り", "コスプレ": "コスプレ", "ごっくん": "ごっくん", "3P": "3P", "顔射": "顔射", "2回戦(60分限定)": "2回戦(60分限定)", "写真動画撮影": "写真動画撮影", "AF": "AF", "N/A": "該当なし", "千代田区": "千代田区", "中央区": "中央区", "港区": "港区", "新宿区": "新宿区", "文京区": "文京区", "台東区": "台東区", "墨田区": "墨田区", "江東区": "江東区", "品川区": "品川区", "目黒区": "目黒区", "大田区": "大田区", "世田谷区": "世田谷区", "渋谷区": "渋谷区", "中野区": "中野区", "杉並区": "杉並区", "豊島区": "豊島区", "北区": "北区", "荒川区": "荒川区", "板橋区": "板橋区", "練馬区": "練馬区", "足立区": "足立区", "葛飾区": "葛飾区", "江戸川区": "江戸川区", "アメリカ": "アメリカ", "イギリス": "イギリス", "カナダ": "カナダ", "シンガポール": "シンガポール", "メキシコ": "メキシコ", "ヨーロッパ系": "ヨーロッパ系", "中東系": "中東系", "香港": "香港", "外販": "外販", "Web予約": "Web予約", "Echoさん経由": "Echoさん経由", "該当なし": "該当なし", "中国": "中国", "韓国": "韓国", "台湾": "台湾", "姫予約": "姫予約", "渡邊さん経由": "渡邊さん経由", "渡辺さん経由": "渡辺さん経由", "飛び込み": "飛び込み", "マイ客": "マイ客", "濱野マイ客": "濱野マイ客", "カイマイ客": "カイマイ客", "マーカスマイ客": "マーカスマイ客", "香港Discord": "香港Discord", "リピーター": "リピーター", "濱野マイ客紹介": "濱野マイ客紹介", "濱野引き": "濱野引き", "渡辺さんマイ客": "渡辺さんマイ客", "ロシア": "ロシア", "インド": "インド", "タイ": "タイ", "ドバイ": "ドバイ", "トルコ": "トルコ", "濱野経由": "濱野経由" }
             },
             'en': {
-                mainTitle: "TokyoGirlsHub Comprehensive Analysis", subTitle: "Integrated Performance Dashboard", refreshBtn: "Refresh", navAll: "Show All", navCustomer: "Customer Trends", navCast: "Cast Analysis", navRace: "Race Analysis", kpiSales: "Total Sales", kpiProfit: "Total Profit", kpiCost: "Total Cost", kpiCustomers: "Total Customers", kpiMarginRate: "Profit Margin", kpiAvgSpend: "Avg. Spend", salesTrendTitle: "Sales, Cost & Margin Rate Trend", salesLabel: "Sales", costLabel: "Cost", marginRateLabel: "Margin %", profitTrendTitle: "Profit Trend", customerTrendTitle: "Customer Trend (New/Repeat)", callTypeTitle: "Call Type Ratio", areaMapTitle: "Popular Delivery Areas (Click for Details)", arrivalTineTitle: "Peak Hours", sourceRatioTitle: "Source Ratio", castPerfTitle: "Cast Performance", kpiTotalPayout: "Total Payout", kpiAvgPayout: "Avg. Payout per Person", castNameCol: "Cast Name", totalCustomersCol: "Total Customers", totalPayoutCol: "Total Payout", avgPayoutCol: "Avg. Payout/Customer", repeatCountCol: "Repeat Count", repeatRateCol: "Repeat Rate", raceAnalysisTitle: "Analysis by Race", tokyoModalTitle: "Tokyo Ward Delivery Ranking", wardModalTitle: "Detailed Analysis", totalPaymentCol: "Total Payment", avgPaymentCol: "Avg. Payment", raceRatioTitle: "Race Ratio", topOptionsTitle: "Top Options", sourceTitle: "Source", periodDataTitle: "Data by Period", sourceRankingTitle: "Source Ranking", topOptionsRankingTitle: "Top Options Ranking", annualData: "Annual Data", yearMonth: "{month}/{year}", profitLabel: "Profit", repeatersLabel: "Repeaters", newCustomersLabel: "New Customers", deliveryCount: "Deliveries", caseSuffix: " cases", selectionCount: "Selections", timesSuffix: " times", customerCount: "Customers", peopleSuffix: " people", monthCol: "Month", raceCol: "Race", avgStayCol: "Avg. Stay", topSourceCol: "Top Source", topOptionCol: "Top Option", minSuffix: " min", dateCol: "Date", periodCol: "Period", optionRateCol: "Option Rate",
-                data: { "日本": "Japan", "イラマチオ": "Deep Throat", "インコール": "In-call", "アウトコール": "Out-call", "不明": "Unknown", "日本人": "Japanese", "中国人": "Chinese", "韓国人": "Korean", "台湾人": "Taiwanese", "フィリピン人": "Filipino", "タイ人": "Thai", "ベトナム人": "Vietnamese", "その他": "Other", "HP": "HP", "リピ": "Repeat", "紹介": "Referral", "X": "X", "Instagram": "Instagram", "TikTok": "TikTok", "オナニー鑑賞": "Viewing", "電マ/バイブ": "Vibrator", "聖水": "Watersports", "足コキ": "Foot Job", "即尺": "Quick Fellatio", "アナル舐め": "Rimming", "パンツ持ち帰り": "Panty Take-home", "パンスト破り": "Stocking Ripping", "コスプレ": "Cosplay", "ごっくん": "Swallowing", "3P": "Threesome", "顔射": "Facial", "2回戦(60分限定)": "2nd Round (60min)", "写真動画撮影": "Photo/Video", "AF": "AF", "N/A": "N/A", "千代田区": "Chiyoda", "中央区": "Chuo", "港区": "Minato", "新宿区": "Shinjuku", "文京区": "Bunkyo", "台東区": "Taito", "墨田区": "Sumida", "江東区": "Koto", "品川区": "Shinagawa", "目黒区": "Meguro", "大田区": "Ota", "世田谷区": "Setagaya", "渋谷区": "Shibuya", "中野区": "Nakano", "杉並区": "Suginami", "豊島区": "Toshima", "北区": "Kita", "荒川区": "Arakawa", "板橋区": "Itabashi", "練馬区": "Nerima", "足立区": "Adachi", "葛飾区": "Katsushika", "江戸川区": "Edogawa", "アメリカ": "America", "イギリス": "UK", "カナダ": "Canada", "シンガポール": "Singapore", "メキシコ": "Mexico", "ヨーロッパ系": "European", "中東系": "Middle Eastern", "香港": "Hong Kong", "外販": "External Sales", "Web予約": "Web Booking", "Echoさん経由": "Via Echo", "該当なし": "N/A", "中国": "China", "韓国": "Korea", "台湾": "Taiwan", "姫予約": "Hime Booking", "渡邊さん経由": "Via Watanabe", "渡辺さん経由": "Via Watanabe", "飛び込み": "Walk-in", "マイ客": "Personal Client", "濱野マイ客": "Hamano's Customer", "カイマイ客": "Kai's Customer", "マーカスマイ客": "Marcus's Customer", "香港Discord": "HK Discord", "リピーター": "Repeater", "濱野マイ客紹介": "Hamano's Customer Referral", "濱野引き": "Brought by Hamano", "渡辺さんマイ客": "Watanabe's Customer", "ロシア": "Russia", "インド": "India", "タイ": "Thailand", "ドバイ": "Dubai", "トルコ": "Turkey" }
+                mainTitle: "TokyoGirlsHub Comprehensive Analysis", subTitle: "Integrated Performance Dashboard", refreshBtn: "Refresh", navAll: "Show All", navCustomer: "Customer Trends", navCast: "Cast Analysis", navRace: "Race Analysis", kpiSales: "Total Sales", kpiProfit: "Total Profit", kpiCost: "Total Cost", kpiCustomers: "Total Customers", kpiMarginRate: "Profit Margin", kpiAvgSpend: "Avg. Spend", salesTrendTitle: "Sales, Cost & Margin Rate Trend", salesLabel: "Sales", costLabel: "Cost", marginRateLabel: "Margin %", profitTrendTitle: "Profit Trend", customerTrendTitle: "Customer Trend (New/Repeat)", callTypeTitle: "Call Type Ratio", areaMapTitle: "Popular Delivery Areas", areaNameCol: "Area", hamanoCountCol: "Via Hamano Count", arrivalTineTitle: "Peak Hours", sourceRatioTitle: "Source Ratio", castPerfTitle: "Cast Performance", kpiTotalPayout: "Total Payout", kpiAvgPayout: "Avg. Payout per Person", castNameCol: "Cast Name", totalCustomersCol: "Total Customers", totalPayoutCol: "Total Payout", avgPayoutCol: "Avg. Payout/Customer", repeatCountCol: "Repeat Count", repeatRateCol: "Repeat Rate", raceAnalysisTitle: "Analysis by Race", tokyoModalTitle: "Tokyo Ward Delivery Ranking", wardModalTitle: "Detailed Analysis", totalPaymentCol: "Total Payment", avgPaymentCol: "Avg. Payment", raceRatioTitle: "Race Ratio", topOptionsTitle: "Top Options", sourceTitle: "Source", periodDataTitle: "Data by Period", sourceRankingTitle: "Source Ranking", topOptionsRankingTitle: "Top Options Ranking", annualData: "Annual Data", yearMonth: "{month}/{year}", profitLabel: "Profit", repeatersLabel: "Repeaters", newCustomersLabel: "New Customers", deliveryCount: "Deliveries", caseSuffix: " cases", selectionCount: "Selections", timesSuffix: " times", customerCount: "Customers", peopleSuffix: " people", monthCol: "Month", raceCol: "Race", avgStayCol: "Avg. Stay", topSourceCol: "Top Source", topOptionCol: "Top Option", minSuffix: " min", dateCol: "Date", periodCol: "Period", optionRateCol: "Option Rate", hamanoRateCol: "% Via Hamano", hamanoSource: "Via Hamano",
+                data: { "日本": "Japan", "イラマチオ": "Deep Throat", "インコール": "In-call", "アウトコール": "Out-call", "不明": "Unknown", "日本人": "Japanese", "中国人": "Chinese", "韓国人": "Korean", "台湾人": "Taiwanese", "フィリピン人": "Filipino", "タイ人": "Thai", "ベトナム人": "Vietnamese", "その他": "Other", "HP": "HP", "リピ": "Repeat", "紹介": "Referral", "X": "X", "Instagram": "Instagram", "TikTok": "TikTok", "オナニー鑑賞": "Viewing", "電マ/バイブ": "Vibrator", "聖水": "Watersports", "足コキ": "Foot Job", "即尺": "Quick Fellatio", "アナル舐め": "Rimming", "パンツ持ち帰り": "Panty Take-home", "パンスト破り": "Stocking Ripping", "コスプレ": "Cosplay", "ごっくん": "Swallowing", "3P": "Threesome", "顔射": "Facial", "2回戦(60分限定)": "2nd Round (60min)", "写真動画撮影": "Photo/Video", "AF": "AF", "N/A": "N/A", "千代田区": "Chiyoda", "中央区": "Chuo", "港区": "Minato", "新宿区": "Shinjuku", "文京区": "Bunkyo", "台東区": "Taito", "墨田区": "Sumida", "江東区": "Koto", "品川区": "Shinagawa", "目黒区": "Meguro", "大田区": "Ota", "世田谷区": "Setagaya", "渋谷区": "Shibuya", "中野区": "Nakano", "杉並区": "Suginami", "豊島区": "Toshima", "北区": "Kita", "荒川区": "Arakawa", "板橋区": "Itabashi", "練馬区": "Nerima", "足立区": "Adachi", "葛飾区": "Katsushika", "江戸川区": "Edogawa", "アメリカ": "America", "イギリス": "UK", "カナダ": "Canada", "シンガポール": "Singapore", "メキシコ": "Mexico", "ヨーロッパ系": "European", "中東系": "Middle Eastern", "香港": "Hong Kong", "外販": "External Sales", "Web予約": "Web Booking", "Echoさん経由": "Via Echo", "該当なし": "N/A", "中国": "China", "韓国": "Korea", "台湾": "Taiwan", "姫予約": "Hime Booking", "渡邊さん経由": "Via Watanabe", "渡辺さん経由": "Via Watanabe", "飛び込み": "Walk-in", "マイ客": "Personal Client", "濱野マイ客": "Hamano's Customer", "カイマイ客": "Kai's Customer", "マーカスマイ客": "Marcus's Customer", "香港Discord": "HK Discord", "リピーター": "Repeater", "濱野マイ客紹介": "Hamano's Customer Referral", "濱野引き": "Brought by Hamano", "渡辺さんマイ客": "Watanabe's Customer", "ロシア": "Russia", "インド": "India", "タイ": "Thailand", "ドバイ": "Dubai", "トルコ": "Turkey", "濱野経由": "Via Hamano" }
             },
             'zh-HK': {
-                mainTitle: "TokyoGirlsHub 綜合分析", subTitle: "綜合表現儀表板", refreshBtn: "刷新", navAll: "顯示全部", navCustomer: "顧客趨勢", navCast: "演員分析", navRace: "種族分析", kpiSales: "總銷售額", kpiProfit: "總利潤", kpiCost: "總成本", kpiCustomers: "總顧客數", kpiMarginRate: "利潤率", kpiAvgSpend: "平均消費", salesTrendTitle: "銷售、成本及利潤率趨勢", salesLabel: "銷售額", costLabel: "成本", marginRateLabel: "利潤率", profitTrendTitle: "利潤趨勢", customerTrendTitle: "顧客趨勢（新客/熟客）", callTypeTitle: "來電類型比例", areaMapTitle: "熱門配送區域（點擊查看詳情）", arrivalTineTitle: "高峰時段", sourceRatioTitle: "來源比例", castPerfTitle: "演員表現", kpiTotalPayout: "總支付額", kpiAvgPayout: "人均支付額", castNameCol: "演員名稱", totalCustomersCol: "總顧客數", totalPayoutCol: "總支付額", avgPayoutCol: "每客平均支付", repeatCountCol: "回頭客次數", repeatRateCol: "回頭率", raceAnalysisTitle: "按種族分析", tokyoModalTitle: "東京區內配送排名", wardModalTitle: "詳細分析", totalPaymentCol: "總支付額", avgPaymentCol: "平均支付額", raceRatioTitle: "種族比例", topOptionsTitle: "熱門選項", sourceTitle: "來源", periodDataTitle: "按時期數據", sourceRankingTitle: "來源排名", topOptionsRankingTitle: "熱門選項排名", annualData: "年度數據", yearMonth: "{year}年{month}月", profitLabel: "利潤", repeatersLabel: "熟客", newCustomersLabel: "新客", deliveryCount: "配送次數", caseSuffix: "次", selectionCount: "選擇次數", timesSuffix: "次", customerCount: "顧客數", peopleSuffix: "人", monthCol: "月份", raceCol: "種族", avgStayCol: "平均逗留時間", topSourceCol: "熱門來源", topOptionCol: "熱門選項", minSuffix: "分鐘", dateCol: "日期", periodCol: "期間", optionRateCol: "選項附加率",
-                data: { "日本": "日本", "イラマチオ": "深喉", "インコール": "內線電話", "アウトコール": "外線電話", "不明": "未知", "日本人": "日本人", "中国人": "中國人", "韓国人": "韓國人", "台湾人": "台灣人", "フィリピン人": "菲律賓人", "タイ人": "泰國人", "ベトナム人": "越南人", "その他": "其他", "HP": "HP", "リピ": "回頭客", "紹介": "介紹", "X": "X", "Instagram": "Instagram", "TikTok": "TikTok", "オナニー鑑賞": "觀賞", "電マ/バイブ": "按摩器", "聖水": "聖水", "足コキ": "足交", "即尺": "即刻口交", "アナル舐め": "舔肛", "パンツ持ち帰り": "內褲帶走", "パンスト破り": "撕破絲襪", "コスプレ": "角色扮演", "ごっくん": "吞嚥", "3P": "3P", "顔射": "顏射", "2回戦(60分限定)": "第二回合 (60分鐘)", "写真動画撮影": "拍照錄影", "AF": "AF", "N/A": "無", "千代田区": "千代田區", "中央区": "中央區", "港区": "港區", "新宿区": "新宿區", "文京区": "文京區", "台東区": "台東區", "墨田区": "墨田區", "江東区": "江東區", "品川区": "品川區", "目黒区": "目黑區", "大田区": "大田區", "世田谷区": "世田谷區", "渋谷区": "澀谷區", "中野区": "中野區", "杉並区": "杉並區", "豊島区": "豐島區", "北区": "北區", "荒川区": "荒川區", "板橋区": "板橋區", "練馬区": "練馬區", "足立区": "足立區", "葛飾区": "葛飾區", "江戸川区": "江戶川區", "アメリカ": "美國", "イギリス": "英國", "カナダ": "加拿大", "シンガポール": "新加坡", "メキシコ": "墨西哥", "ヨーロッパ系": "歐洲裔", "中東系": "中東裔", "香港": "香港", "外販": "外部銷售", "Web予約": "網上預約", "Echoさん経由": "經由Echo", "該当なし": "無", "中国": "中國", "韓国": "韓國", "台湾": "台灣", "姫予約": "公主預約", "渡邊さん経由": "經由渡邊", "渡辺さん経由": "經由渡邊", "飛び込み": "街客", "マイ客": "私人客戶", "濱野マイ客": "濱野的私人客戶", "カイマイ客": "Kai的私人客戶", "マーカスマイ客": "Marcus的私人客戶", "香港Discord": "香港Discord", "リピーター": "回頭客", "濱野マイ客紹介": "濱野的客戶介紹", "濱野引き": "由濱野帶來", "渡辺さんマイ客": "渡邊的私人客戶", "ロシア": "俄羅斯", "インド": "印度", "タイ": "泰國", "ドバイ": "杜拜", "トルコ": "土耳其" }
+                mainTitle: "TokyoGirlsHub 綜合分析", subTitle: "綜合表現儀表板", refreshBtn: "刷新", navAll: "顯示全部", navCustomer: "顧客趨勢", navCast: "演員分析", navRace: "種族分析", kpiSales: "總銷售額", kpiProfit: "總利潤", kpiCost: "總成本", kpiCustomers: "總顧客數", kpiMarginRate: "利潤率", kpiAvgSpend: "平均消費", salesTrendTitle: "銷售、成本及利潤率趨勢", salesLabel: "銷售額", costLabel: "成本", marginRateLabel: "利潤率", profitTrendTitle: "利潤趨勢", customerTrendTitle: "顧客趨勢（新客/熟客）", callTypeTitle: "來電類型比例", areaMapTitle: "熱門配送區域", areaNameCol: "區域", hamanoCountCol: "經由濱野數", arrivalTineTitle: "高峰時段", sourceRatioTitle: "來源比例", castPerfTitle: "演員表現", kpiTotalPayout: "總支付額", kpiAvgPayout: "人均支付額", castNameCol: "演員名稱", totalCustomersCol: "總顧客數", totalPayoutCol: "總支付額", avgPayoutCol: "每客平均支付", repeatCountCol: "回頭客次數", repeatRateCol: "回頭率", raceAnalysisTitle: "按種族分析", tokyoModalTitle: "東京區內配送排名", wardModalTitle: "詳細分析", totalPaymentCol: "總支付額", avgPaymentCol: "平均支付額", raceRatioTitle: "種族比例", topOptionsTitle: "熱門選項", sourceTitle: "來源", periodDataTitle: "按時期數據", sourceRankingTitle: "來源排名", topOptionsRankingTitle: "熱門選項排名", annualData: "年度數據", yearMonth: "{year}年{month}月", profitLabel: "利潤", repeatersLabel: "熟客", newCustomersLabel: "新客", deliveryCount: "配送次數", caseSuffix: "次", selectionCount: "選擇次數", timesSuffix: "次", customerCount: "顧客數", peopleSuffix: "人", monthCol: "月份", raceCol: "種族", avgStayCol: "平均逗留時間", topSourceCol: "熱門來源", topOptionCol: "熱門選項", minSuffix: "分鐘", dateCol: "日期", periodCol: "期間", optionRateCol: "選項附加率", hamanoRateCol: "經由濱野%", hamanoSource: "經由濱野",
+                data: { "日本": "日本", "イラマチオ": "深喉", "インコール": "內線電話", "アウトコール": "外線電話", "不明": "未知", "日本人": "日本人", "中国人": "中國人", "韓国人": "韓國人", "台湾人": "台灣人", "フィリピン人": "菲律賓人", "タイ人": "泰國人", "ベトナム人": "越南人", "その他": "其他", "HP": "HP", "リピ": "回頭客", "紹介": "介紹", "X": "X", "Instagram": "Instagram", "TikTok": "TikTok", "オナニー鑑賞": "觀賞", "電マ/バイブ": "按摩器", "聖水": "聖水", "足コキ": "足交", "即尺": "即刻口交", "アナル舐め": "舔肛", "パンツ持ち帰り": "內褲帶走", "パンスト破り": "撕破絲襪", "コスプレ": "角色扮演", "ごっくん": "吞嚥", "3P": "3P", "顔射": "顏射", "2回戦(60分限定)": "第二回合 (60分鐘)", "写真動画撮影": "拍照錄影", "AF": "AF", "N/A": "無", "千代田区": "千代田區", "中央区": "中央區", "港区": "港區", "新宿区": "新宿區", "文京区": "文京區", "台東区": "台東區", "墨田区": "墨田區", "江東区": "江東區", "品川区": "品川區", "目黒区": "目黑區", "大田区": "大田區", "世田谷区": "世田谷區", "渋谷区": "澀谷區", "中野区": "中野區", "杉並区": "杉並區", "豊島区": "豐島區", "北区": "北區", "荒川区": "荒川區", "板橋区": "板橋區", "練馬区": "練馬區", "足立区": "足立區", "葛飾区": "葛飾區", "江戸川区": "江戶川區", "アメリカ": "美國", "イギリス": "英國", "カナダ": "加拿大", "シンガポール": "新加坡", "メキシコ": "墨西哥", "ヨーロッパ系": "歐洲裔", "中東系": "中東裔", "香港": "香港", "外販": "外部銷售", "Web予約": "網上預約", "Echoさん経由": "經由Echo", "該当なし": "無", "中国": "中國", "韓国": "韓國", "台湾": "台灣", "姫予約": "公主預約", "渡邊さん経由": "經由渡邊", "渡辺さん経由": "經由渡邊", "飛び込み": "街客", "マイ客": "私人客戶", "濱野マイ客": "濱野的私人客戶", "カイマイ客": "Kai的私人客戶", "マーカスマイ客": "Marcus的私人客戶", "香港Discord": "香港Discord", "リピーター": "回頭客", "濱野マイ客紹介": "濱野的客戶介紹", "濱野引き": "由濱野帶來", "渡辺さんマイ客": "渡邊的私人客戶", "ロシア": "俄羅斯", "インド": "印度", "タイ": "泰國", "ドバイ": "杜拜", "トルコ": "土耳其", "濱野経由": "經由濱野" }
             }
         };
 
@@ -705,8 +715,7 @@
             updateDashboard(document.getElementById('monthSelector').value);
         }
 
-        am4core.ready(function() {
-            am4core.useTheme(am4themes_animated);
+        document.addEventListener('DOMContentLoaded', function() {
             fetchDataAndProcess();
 
             document.getElementById('refreshDataBtn').addEventListener('click', fetchDataAndProcess);
@@ -736,7 +745,6 @@
                 btn.addEventListener('click', () => {
                     const modal = btn.closest('.modal-overlay');
                     modal.classList.remove('visible');
-                    if (modal.id === 'tokyo-modal' && window.tokyoModalBarChart) window.tokyoModalBarChart.destroy();
                     if (modal.id === 'ward-detail-modal') ['ward-race-chart', 'ward-options-chart', 'ward-source-chart'].forEach(id => { if(window[id+'_instance']) window[id+'_instance'].destroy(); });
                     if (modal.id === 'castDetailModal') { if(window['cast-options-chart_instance']) window['cast-options-chart_instance'].destroy(); }
                     if (modal.id === 'raceDetailModal') { if(window['race-source-chart_instance']) window['race-source-chart_instance'].destroy(); if(window['race-options-chart_instance']) window['race-options-chart_instance'].destroy(); }
