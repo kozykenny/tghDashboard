@@ -334,18 +334,38 @@
 
         // --- Main Data Flow & Update Logic ---
         function fetchDataAndProcess() {
-            fetch(`${GOOGLE_SHEET_URL}&_=${new Date().getTime()}`)
-                .then(response => response.text())
-                .then(csvText => {
-                    allData = csvToArrayOfObjects(csvText);
-                    allParsedCustomerData = allData.flatMap(dailyRecord => {
-                        const recordDate = getCorrectDate(dailyRecord['日付']);
-                        return parseCustomerDetails(dailyRecord['顧客詳細'], recordDate);
-                    });
-                    populateMonthSelector();
-                    updateDashboard(document.getElementById('monthSelector').value);
-                }).catch(error => console.error('Failed to fetch/process data:', error));
-        }
+  const url = `${GOOGLE_SHEET_URL}&_=${Date.now()}`;
+  fetch(url, { cache: 'no-store' })
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.text();
+    })
+    .then(csvText => {
+      allData = csvToArrayOfObjects(csvText);
+
+      // Quick guard: required columns must exist
+      const hasDate = allData.some(r => '日付' in r || '\uFEFF日付' in r);
+      const hasDetails = allData.some(r => '顧客詳細' in r);
+      if (!hasDate || !hasDetails) {
+        console.error('Missing expected columns. First row keys:', Object.keys(allData[0] || {}));
+      }
+
+      allParsedCustomerData = allData.flatMap(dailyRecord => {
+        const dateKey = ('日付' in dailyRecord) ? '日付' : '\uFEFF日付';
+        const recordDate = getCorrectDate(dailyRecord[dateKey]);
+        return parseCustomerDetails(dailyRecord['顧客詳細'], recordDate);
+      });
+
+      populateMonthSelector();
+      updateDashboard(document.getElementById('monthSelector').value || 'all');
+    })
+    .catch(error => {
+      console.error('Failed to fetch/process data:', error);
+      // Optional: visible hint so you know it’s network vs parsing
+      // alert('データ取得に失敗しました。シート公開URL/権限を確認してください。');
+    });
+}
+
 
         function populateMonthSelector() {
             const monthSelector = document.getElementById('monthSelector');
