@@ -281,35 +281,20 @@
         const formatPercent = (value) => (value || 0).toLocaleString('ja-JP', { style: 'percent', minimumFractionDigits: 1 });
         const PREMIUM_COLORS = ['#f472b6', '#fbbf24', '#a78bfa', '#f87171', '#4ade80', '#fb7185', '#e879f9', '#818cf8', '#f59e0b', '#34d399'];
 
-        // --- Data Parsing ---
+        // Robust CSV → array of objects, with BOM/header cleanup
         function csvToArrayOfObjects(csvText) {
-            const data = [];
-            const headerMatch = csvText.match(/^(.*)\r?\n/);
-            if (!headerMatch) return [];
-            const header = headerMatch[1].split(',').map(h => h.trim());
-            const rowsText = csvText.substring(headerMatch[0].length);
-            const records = rowsText.split(/(?=\d{1,2}\/\d{1,2},)/).filter(r => r.trim());
-            for (const record of records) {
-                const values = []; let currentVal = ''; let inQuotes = false;
-                for (let i = 0; i < record.length; i++) {
-                    const char = record[i];
-                    if (char === '"') inQuotes = !inQuotes;
-                    else if (char === ',' && !inQuotes) { values.push(currentVal.trim()); currentVal = ''; }
-                    else currentVal += char;
-                }
-                values.push(currentVal.trim());
-                if (values.length === header.length) {
-                    const obj = {};
-                    header.forEach((key, index) => {
-                        let value = values[index];
-                        if (value.startsWith('"') && value.endsWith('"')) value = value.substring(1, value.length - 1);
-                        obj[key] = value.replace(/""/g, '"');
-                    });
-                    data.push(obj);
-                }
+          const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+          // Normalize header keys (trim + remove BOM) so '日付' actually matches
+          return parsed.data.map(row => {
+            const cleaned = {};
+            for (const k in row) {
+              const nk = k.replace(/^\uFEFF/, '').trim();
+              cleaned[nk] = row[k];
             }
-            return data;
+            return cleaned;
+          });
         }
+        
 
         function getCorrectDate(dateStr) {
             if (!dateStr || !/^\d{1,2}\/\d{1,2}$/.test(dateStr)) return null;
