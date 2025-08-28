@@ -916,6 +916,19 @@
             const totalCasts = Object.keys(currentCastStats).length;
             document.getElementById('kpi-total-payout').textContent = formatYen(totalPayout);
             document.getElementById('kpi-avg-payout').textContent = formatYen(data.length > 0 ? totalPayout / data.length : 0);
+            
+            const slicerContainer = document.getElementById('cast-sort-slicer');
+            const tableHead = document.getElementById('cast-table-head');
+            slicerContainer.innerHTML = ''; 
+            tableHead.querySelectorAll('th[data-sort]').forEach(th => {
+                const sortKey = th.dataset.sort;
+                const button = document.createElement('button');
+                button.classList.add('slicer-btn');
+                button.dataset.sort = sortKey;
+                button.innerHTML = th.querySelector('span[data-lang-key]').textContent;
+                slicerContainer.appendChild(button);
+            });
+
             renderCastTable();
         }
 
@@ -983,6 +996,10 @@
                     arrowSpan.textContent = th.dataset.sort === currentSort.key ? (currentSort.direction === 'asc' ? '▲' : '▼') : '';
                 }
             });
+
+            document.querySelectorAll('#cast-sort-slicer .slicer-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.sort === currentSort.key);
+            });
         }
 
         // --- Race Analysis Table Functions (Refactored) ---
@@ -1023,7 +1040,7 @@
                 };
             });
             
-            tableHead.innerHTML = `<tr>
+            const tempHeadHTML = `<tr>
                 <th data-sort="label">${isAnnualView ? translations[currentLang].monthCol : translations[currentLang].raceCol}<span class="sort-arrow"></span></th>
                 <th data-sort="customerCount">${translations[currentLang].totalCustomersCol}<span class="sort-arrow"></span></th>
                 <th data-sort="avgDuration">${translations[currentLang].avgStayCol}<span class="sort-arrow"></span></th>
@@ -1034,6 +1051,20 @@
                 <th data-sort="hamanoCustomerCount">${translations[currentLang].hamanoCountCol}<span class="sort-arrow"></span></th>
                 <th data-sort="hamanoRate">${translations[currentLang].hamanoRateCol}<span class="sort-arrow"></span></th>
             </tr>`;
+            tableHead.innerHTML = tempHeadHTML;
+
+            const slicerContainer = document.getElementById('race-sort-slicer');
+            slicerContainer.innerHTML = '';
+            const tempThead = document.createElement('thead');
+            tempThead.innerHTML = tempHeadHTML;
+            tempThead.querySelectorAll('th[data-sort]').forEach(th => {
+                const sortKey = th.dataset.sort;
+                const button = document.createElement('button');
+                button.classList.add('slicer-btn');
+                button.dataset.sort = sortKey;
+                button.textContent = th.textContent;
+                slicerContainer.appendChild(button);
+            });
 
             renderRaceTable();
         }
@@ -1095,6 +1126,10 @@
                 if (arrowSpan) {
                     arrowSpan.textContent = th.dataset.sort === currentRaceSort.key ? (currentRaceSort.direction === 'asc' ? '▲' : '▼') : '';
                 }
+            });
+            
+            document.querySelectorAll('#race-sort-slicer .slicer-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.sort === currentRaceSort.key);
             });
         }
         
@@ -1555,7 +1590,35 @@
                 }
             });
 
+            document.getElementById('cast-sort-slicer').addEventListener('click', e => {
+                const btn = e.target.closest('.slicer-btn');
+                if (!btn || !btn.dataset.sort) return;
+                const sortKey = btn.dataset.sort;
+                if (currentSort.key === sortKey) {
+                    currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSort.key = sortKey;
+                    currentSort.direction = 'desc';
+                }
+                renderCastTable();
+            });
+
+            document.getElementById('race-sort-slicer').addEventListener('click', e => {
+                const btn = e.target.closest('.slicer-btn');
+                if (!btn || !btn.dataset.sort) return;
+                const sortKey = btn.dataset.sort;
+                if (currentRaceSort.key === sortKey) {
+                    currentRaceSort.direction = currentRaceSort.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentRaceSort.key = sortKey;
+                    currentRaceSort.direction = 'desc';
+                }
+                renderRaceTable();
+            });
+
         });
     </script>
 </body>
 </html>
+"
+I'm asking a question about the code I have select
