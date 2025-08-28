@@ -30,10 +30,11 @@
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
-        .card:hover {
+        .card.kpi-card:hover, #call-type-chart-container:hover, #arrival-time-chart-container:hover, #source-ratio-chart-container:hover {
             transform: translateY(-5px) scale(1.02);
             box-shadow: 0 10px 30px rgba(56, 189, 248, 0.2), 0 0 15px rgba(56, 189, 248, 0.1);
             border-color: rgba(56, 189, 248, 0.4);
+            cursor: pointer;
         }
         #periodSelector {
             -webkit-appearance: none; -moz-appearance: none; appearance: none;
@@ -105,9 +106,51 @@
             border-radius: 50%;
             border: 2px solid #111827;
         }
+        
+        /* Responsive Table Styles */
+        @media screen and (max-width: 768px) {
+            .styled-table thead {
+                display: none;
+            }
+            .styled-table, .styled-table tbody, .styled-table tr, .styled-table td {
+                display: block;
+                width: 100%;
+            }
+            .styled-table tr {
+                margin-bottom: 1rem;
+                border: 1px solid #374151;
+                border-radius: 1rem;
+                overflow: hidden;
+            }
+            .styled-table td {
+                text-align: right;
+                position: relative;
+                padding-left: 50%;
+                border-bottom: 1px solid #374151;
+            }
+            .styled-table td:last-child {
+                border-bottom: 0;
+            }
+            .styled-table td::before {
+                content: attr(data-label);
+                position: absolute;
+                left: 0;
+                width: 45%;
+                padding-left: 1rem;
+                font-weight: 600;
+                text-align: left;
+                white-space: normal;
+                color: #9ca3af;
+            }
+        }
     </style>
 </head>
 <body class="p-4 sm:p-6 lg:p-8">
+
+    <div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-90 flex flex-col items-center justify-center z-[100]" style="display: flex;">
+        <div class="w-16 h-16 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+        <p class="mt-4 text-lg text-gray-300" data-lang-key="loadingData">データを読み込んでいます...</p>
+    </div>
 
     <div class="max-w-screen-2xl mx-auto">
         <header class="flex flex-col sm:flex-row justify-between items-center mb-6">
@@ -147,17 +190,17 @@
             <!-- Section: Performance Overview -->
             <section id="performance-overview" class="dashboard-section grid grid-cols-12 gap-6 mb-6">
                 <div class="col-span-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div class="card p-6 text-center"><p class="text-sm text-gray-400" data-lang-key="kpiSales">売上合計</p><p id="kpi-sales" class="text-3xl font-bold">¥0</p></div>
-                    <div class="card p-6 text-center"><p class="text-sm text-gray-400" data-lang-key="kpiProfit">粗利合計</p><p id="kpi-profit" class="text-3xl font-bold">¥0</p></div>
-                    <div class="card p-6 text-center"><p class="text-sm text-gray-400" data-lang-key="kpiCost">原価合計</p><p id="kpi-cost" class="text-3xl font-bold">¥0</p></div>
-                    <div class="card p-6 text-center"><p class="text-sm text-gray-400" data-lang-key="kpiCustomers">客数合計</p><p id="kpi-customers" class="text-3xl font-bold">0</p></div>
-                    <div class="card p-6 text-center"><p class="text-sm text-gray-400" data-lang-key="kpiMarginRate">粗利率</p><p id="kpi-margin-rate" class="text-3xl font-bold">0%</p></div>
-                    <div class="card p-6 text-center"><p class="text-sm text-gray-400" data-lang-key="kpiAvgSpend">平均客単価</p><p id="kpi-avg-spend" class="text-3xl font-bold">¥0</p></div>
+                    <div class="card kpi-card p-6 text-center" data-kpi="sales"><p class="text-sm text-gray-400" data-lang-key="kpiSales">売上合計</p><p id="kpi-sales" class="text-3xl font-bold">¥0</p></div>
+                    <div class="card kpi-card p-6 text-center" data-kpi="profit"><p class="text-sm text-gray-400" data-lang-key="kpiProfit">粗利合計</p><p id="kpi-profit" class="text-3xl font-bold">¥0</p></div>
+                    <div class="card kpi-card p-6 text-center" data-kpi="cost"><p class="text-sm text-gray-400" data-lang-key="kpiCost">原価合計</p><p id="kpi-cost" class="text-3xl font-bold">¥0</p></div>
+                    <div class="card kpi-card p-6 text-center" data-kpi="customers"><p class="text-sm text-gray-400" data-lang-key="kpiCustomers">客数合計</p><p id="kpi-customers" class="text-3xl font-bold">0</p></div>
+                    <div class="card kpi-card p-6 text-center" data-kpi="marginRate"><p class="text-sm text-gray-400" data-lang-key="kpiMarginRate">粗利率</p><p id="kpi-margin-rate" class="text-3xl font-bold">0%</p></div>
+                    <div class="card kpi-card p-6 text-center" data-kpi="avgSpend"><p class="text-sm text-gray-400" data-lang-key="kpiAvgSpend">平均客単価</p><p id="kpi-avg-spend" class="text-3xl font-bold">¥0</p></div>
                 </div>
-                <div class="col-span-12 grid grid-cols-1 sm:grid-cols-3 gap-6">
-                    <div class="card p-6 text-center"><p class="text-sm text-gray-400" data-lang-key="kpiAvgCustomersPerDay">客数日数平均</p><p id="kpi-avg-customers-per-day" class="text-3xl font-bold">0</p></div>
-                    <div class="card p-6 text-center"><p class="text-sm text-gray-400" data-lang-key="kpiAvgProfitPerDay">粗利日数平均</p><p id="kpi-avg-profit-per-day" class="text-3xl font-bold">¥0</p></div>
-                    <div class="card p-6 text-center"><p class="text-sm text-gray-400" data-lang-key="kpiAvgDurationPerDay">分数日数平均</p><p id="kpi-avg-duration-per-day" class="text-3xl font-bold">0分</p></div>
+                <div id="average-kpi-container" class="col-span-12 grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <div class="card kpi-card p-6 text-center" data-kpi="avgCustomersPerDay"><p class="text-sm text-gray-400" data-lang-key="kpiAvgCustomersPerDay">客数日数平均</p><p id="kpi-avg-customers-per-day" class="text-3xl font-bold">0</p></div>
+                    <div class="card kpi-card p-6 text-center" data-kpi="avgProfitPerDay"><p class="text-sm text-gray-400" data-lang-key="kpiAvgProfitPerDay">粗利日数平均</p><p id="kpi-avg-profit-per-day" class="text-3xl font-bold">¥0</p></div>
+                    <div class="card kpi-card p-6 text-center" data-kpi="avgDurationPerDay"><p class="text-sm text-gray-400" data-lang-key="kpiAvgDurationPerDay">分数日数平均</p><p id="kpi-avg-duration-per-day" class="text-3xl font-bold">0分</p></div>
                 </div>
                 <div class="col-span-12 card p-6">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
@@ -184,7 +227,7 @@
             <section id="customer-deep-dive" class="dashboard-section grid grid-cols-12 gap-6 mb-6">
                 <div class="col-span-12 lg:col-span-4 card p-6">
                     <h2 class="text-xl font-semibold accent-text mb-4" data-lang-key="callTypeTitle">コール種別 比率</h2>
-                    <div class="h-96 flex items-center justify-center"><canvas id="call-type-chart"></canvas></div>
+                    <div id="call-type-chart-container" class="h-96 flex items-center justify-center rounded-2xl"><canvas id="call-type-chart"></canvas></div>
                 </div>
                 <div class="col-span-12 lg:col-span-8 card p-6">
                     <h2 class="text-xl font-semibold accent-text mb-4" data-lang-key="areaMapTitle">人気配達エリア</h2>
@@ -202,11 +245,11 @@
                 </div>
                 <div class="col-span-12 lg:col-span-8 card p-6">
                     <h2 class="text-xl font-semibold accent-text mb-4" data-lang-key="arrivalTineTitle">入客時間帯</h2>
-                    <div class="h-96"> <canvas id="arrival-time-chart"></canvas> </div>
+                    <div id="arrival-time-chart-container" class="h-96"><canvas id="arrival-time-chart"></canvas></div>
                 </div>
                 <div class="col-span-12 lg:col-span-4 card p-6 flex flex-col">
                     <h2 class="text-xl font-semibold accent-text mb-4 flex-shrink-0" data-lang-key="sourceRatioTitle">経由元 比率</h2>
-                    <div class="relative flex-grow overflow-y-auto"> <canvas id="source-ratio-chart"></canvas> </div>
+                    <div id="source-ratio-chart-container" class="relative flex-grow overflow-y-auto"><canvas id="source-ratio-chart"></canvas></div>
                 </div>
             </section>
 
@@ -267,7 +310,7 @@
 
     <!-- Modals -->
     <div id="ward-detail-modal" class="modal-overlay">
-        <div class="card modal-content w-full max-w-6xl h-full max-h-[90vh] p-6 flex flex-col relative">
+        <div class="card modal-content w-11/12 max-w-6xl h-full max-h-[90vh] p-6 flex flex-col relative">
             <button data-close-modal="ward-detail-modal" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-10"><i class="fas fa-times fa-2x"></i></button>
             <h2 class="text-2xl font-bold accent-text mb-4"><span id="ward-modal-name"></span> <span data-lang-key="wardModalTitle">詳細分析</span></h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -284,7 +327,7 @@
     </div>
 
     <div id="castDetailModal" class="modal-overlay">
-        <div class="modal-content card max-w-6xl h-full max-h-[90vh] p-6 flex flex-col relative">
+        <div class="modal-content card w-11/12 max-w-6xl h-full max-h-[90vh] p-6 flex flex-col relative">
             <button data-close-modal="castDetailModal" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-10"><i class="fas fa-times fa-2x"></i></button>
             <h2 class="text-2xl font-bold accent-text mb-6"><span id="cast-modal-name"></span> <span data-lang-key="wardModalTitle">詳細分析</span></h2>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-grow min-h-0">
@@ -295,7 +338,7 @@
     </div>
     
     <div id="raceDetailModal" class="modal-overlay">
-        <div class="modal-content card max-w-6xl h-full max-h-[90vh] p-6 flex flex-col relative">
+        <div class="modal-content card w-11/12 max-w-6xl h-full max-h-[90vh] p-6 flex flex-col relative">
             <button data-close-modal="raceDetailModal" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-10"><i class="fas fa-times fa-2x"></i></button>
             <h2 class="text-2xl font-bold accent-text mb-6"><span id="race-modal-name"></span> <span data-lang-key="wardModalTitle">詳細分析</span></h2>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6"><div class="card p-4"><h3 class="font-semibold mb-2 text-center text-gray-300" data-lang-key="sourceRankingTitle">経由元ランキング</h3><div class="h-64"><canvas id="race-source-chart"></canvas></div></div><div class="card p-4"><h3 class="font-semibold mb-2 text-center text-gray-300" data-lang-key="topOptionsRankingTitle">人気オプションランキング</h3><div class="h-64"><canvas id="race-options-chart"></canvas></div></div></div>
@@ -303,14 +346,66 @@
         </div>
     </div>
 
+    <div id="kpiDetailModal" class="modal-overlay">
+        <div class="modal-content card w-11/12 max-w-6xl h-full max-h-[90vh] p-6 flex flex-col relative">
+            <button data-close-modal="kpiDetailModal" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-10"><i class="fas fa-times fa-2x"></i></button>
+            <h2 id="kpi-modal-title" class="text-2xl font-bold accent-text mb-6">詳細分析</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-grow min-h-0">
+                <div class="card p-4 flex flex-col">
+                    <h3 id="kpi-main-chart-title" class="font-semibold mb-2 text-center text-gray-300">推移</h3>
+                    <div class="flex-grow h-64"><canvas id="kpi-main-chart"></canvas></div>
+                </div>
+                <div class="card p-4 flex flex-col">
+                    <h3 id="kpi-secondary-chart-title" class="font-semibold mb-2 text-center text-gray-300">内訳</h3>
+                    <div class="flex-grow h-64"><canvas id="kpi-secondary-chart"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="callTypeDetailModal" class="modal-overlay">
+        <div class="modal-content card w-11/12 max-w-6xl h-full max-h-[90vh] p-6 flex flex-col relative">
+            <button data-close-modal="callTypeDetailModal" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-10"><i class="fas fa-times fa-2x"></i></button>
+            <h2 id="call-type-modal-title" class="text-2xl font-bold accent-text mb-6">詳細分析</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-grow min-h-0">
+                <div class="card p-4 flex flex-col"><h3 class="font-semibold mb-2 text-center text-gray-300" data-lang-key="raceRatioTitle">人種比率</h3><div class="flex-grow h-64"><canvas id="call-type-race-chart"></canvas></div></div>
+                <div class="card p-4 flex flex-col"><h3 class="font-semibold mb-2 text-center text-gray-300" data-lang-key="sourceRatioTitle">経由元比率</h3><div class="flex-grow h-64"><canvas id="call-type-source-chart"></canvas></div></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="timeDetailModal" class="modal-overlay">
+        <div class="modal-content card w-11/12 max-w-6xl h-full max-h-[90vh] p-6 flex flex-col relative">
+            <button data-close-modal="timeDetailModal" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-10"><i class="fas fa-times fa-2x"></i></button>
+            <h2 id="time-modal-title" class="text-2xl font-bold accent-text mb-6">詳細分析</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-grow min-h-0">
+                <div class="card p-4 flex flex-col"><h3 class="font-semibold mb-2 text-center text-gray-300" data-lang-key="raceRatioTitle">人種比率</h3><div class="flex-grow h-64"><canvas id="time-race-chart"></canvas></div></div>
+                <div class="card p-4 flex flex-col"><h3 class="font-semibold mb-2 text-center text-gray-300" data-lang-key="sourceRatioTitle">経由元比率</h3><div class="flex-grow h-64"><canvas id="time-source-chart"></canvas></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="sourceDetailModal" class="modal-overlay">
+        <div class="modal-content card w-11/12 max-w-6xl h-full max-h-[90vh] p-6 flex flex-col relative">
+            <button data-close-modal="sourceDetailModal" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-10"><i class="fas fa-times fa-2x"></i></button>
+            <h2 id="source-modal-title" class="text-2xl font-bold accent-text mb-6">詳細分析</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-grow min-h-0">
+                <div class="card p-4 flex flex-col"><h3 class="font-semibold mb-2 text-center text-gray-300" data-lang-key="raceRatioTitle">人種比率</h3><div class="flex-grow h-64"><canvas id="source-race-chart"></canvas></div></div>
+                <div class="card p-4 flex flex-col"><h3 class="font-semibold mb-2 text-center text-gray-300" data-lang-key="castRankingTitle">キャストランキング</h3><div class="flex-grow h-64"><canvas id="source-cast-chart"></canvas></div></div>
+            </div>
+        </div>
+    </div>
+
+
     <script>
         const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQSsuwQKznZw-P1MlRC1lQiB0kUO7C-HUz-WrdG23xPH0p_BEnm6TX2Qz1mIB1-s9-UV4QfxWkxvRaD/pub?gid=1213353290&single=true&output=csv';
         const PROXY_URL = 'https://corsproxy.io/?';
         
         let allData = [];
         let allParsedCustomerData = [];
-        let availableDates = []; // ADDED: To store unique dates for the slider
+        let availableDates = []; 
         let currentFilteredData = [];
+        let currentFilteredOverallData = [];
         let currentCastStats = {};
         let currentRaceAnalysisData = [];
         let currentSort = { key: 'totalPayout', direction: 'desc' };
@@ -409,6 +504,9 @@
 
         // --- Main Data Flow & Update Logic ---
         function fetchDataAndProcess() {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            loadingOverlay.style.display = 'flex';
+
             const urlWithCacheBuster = `${GOOGLE_SHEET_URL}&_=${new Date().getTime()}`;
             const fetchUrl = `${PROXY_URL}${encodeURIComponent(urlWithCacheBuster)}`;
 
@@ -430,7 +528,12 @@
                     });
                     populatePeriodSelector();
                     updateDashboard(document.getElementById('periodSelector').value);
-                }).catch(error => console.error('Failed to fetch/process data:', error));
+                }).catch(error => {
+                    console.error('Failed to fetch/process data:', error);
+                    loadingOverlay.querySelector('p').textContent = 'データの読み込みに失敗しました。';
+                }).finally(() => {
+                    setTimeout(() => { loadingOverlay.style.display = 'none'; }, 500);
+                });
         }
 
         function populatePeriodSelector() {
@@ -449,7 +552,6 @@
             annualOption.textContent = translations[currentLang].annualData;
             periodSelector.appendChild(annualOption);
             
-            // ADDED: Daily view option
             const dailyOption = document.createElement('option');
             dailyOption.value = 'daily';
             dailyOption.dataset.langKey = 'dailyData';
@@ -472,7 +574,6 @@
             }
         }
         
-        // ADDED: Function to initialize and manage the daily view slider
         function initializeDailyView() {
             const dateSlider = document.getElementById('dateSlider');
             const uniqueDates = [...new Set(allParsedCustomerData.map(c => c.date ? c.date.getTime() : null).filter(Boolean))];
@@ -490,18 +591,16 @@
             const dailyControls = document.getElementById('daily-controls-container');
             if (period === 'daily') {
                 dailyControls.style.display = 'flex';
-                // Data will be filtered by the slider's event listener
                 const dateSlider = document.getElementById('dateSlider');
                 if (availableDates.length === 0) initializeDailyView();
-                // Trigger update if not already triggered
-                if (dateSlider.value) {
+                if (dateSlider.value && availableDates.length > 0) {
                      const selectedDate = availableDates[dateSlider.value];
                      filterDataForDay(selectedDate);
                 }
             } else {
                 dailyControls.style.display = 'none';
                 const isAnnualView = period === 'all';
-                const filteredOverallData = isAnnualView ? allData : allData.filter(row => {
+                currentFilteredOverallData = isAnnualView ? allData : allData.filter(row => {
                     const d = getCorrectDate(row['日付']);
                     return d && `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}` === period;
                 });
@@ -510,24 +609,24 @@
                     const customerMonth = `${customer.date.getFullYear()}-${(customer.date.getMonth() + 1).toString().padStart(2, '0')}`;
                     return customerMonth === period;
                 });
-                updateAllSections(filteredOverallData, currentFilteredData, isAnnualView, false);
+                updateAllSections(currentFilteredOverallData, currentFilteredData, isAnnualView, false);
             }
         }
         
         function filterDataForDay(selectedDate) {
              if (!selectedDate) return;
              const dateStr = `${selectedDate.getMonth() + 1}/${selectedDate.getDate()}`;
-             const filteredOverallData = allData.filter(row => row['日付'] === dateStr);
+             currentFilteredOverallData = allData.filter(row => row['日付'] === dateStr);
              
              currentFilteredData = allParsedCustomerData.filter(customer => {
                  return customer.date && customer.date.getTime() === selectedDate.getTime();
              });
-             updateAllSections(filteredOverallData, currentFilteredData, false, true);
+             updateAllSections(currentFilteredOverallData, currentFilteredData, false, true);
         }
 
         function updateAllSections(overallData, customerData, isAnnualView, isDailyView) {
             updateKpis(overallData);
-            updateDailyAverageKpis(overallData, customerData);
+            updateDailyAverageKpis(overallData, customerData, isDailyView);
             createPerformanceCharts(overallData, customerData, isAnnualView, isDailyView);
             createCallTypeChart(customerData);
             createAreaAnalysisSection(customerData);
@@ -550,17 +649,10 @@
             document.getElementById('kpi-avg-spend').textContent = formatYen(totalCustomers > 0 ? totalSales / totalCustomers : 0);
         }
 
-        function updateDailyAverageKpis(overallData, customerData) {
-            const kpiAvgCust = document.getElementById('kpi-avg-customers-per-day').parentElement;
-            const kpiAvgProfit = document.getElementById('kpi-avg-profit-per-day').parentElement;
-            const kpiAvgDuration = document.getElementById('kpi-avg-duration-per-day').parentElement;
-            
-            const isDaily = document.getElementById('periodSelector').value === 'daily';
-            kpiAvgCust.style.display = isDaily ? 'none' : 'block';
-            kpiAvgProfit.style.display = isDaily ? 'none' : 'block';
-            kpiAvgDuration.style.display = isDaily ? 'none' : 'block';
-            
-            if(isDaily) return;
+        function updateDailyAverageKpis(overallData, customerData, isDailyView) {
+            const container = document.getElementById('average-kpi-container');
+            container.style.display = isDailyView ? 'none' : 'grid';
+            if(isDailyView) return;
 
             const numberOfDays = overallData.length;
             if (numberOfDays === 0) {
@@ -585,7 +677,6 @@
 
         // --- Chart & Table Rendering ---
         function createPerformanceCharts(overallData, customerData, isAnnualView, isDailyView) {
-            // Update chart titles based on view
             document.getElementById('main-chart-title').textContent = isDailyView ? translations[currentLang].hourlySalesTrend : translations[currentLang].salesTrendTitle;
             document.getElementById('profit-chart-title').textContent = isDailyView ? translations[currentLang].hourlyProfitTrend : translations[currentLang].profitTrendTitle;
             document.getElementById('customer-chart-title').textContent = isDailyView ? translations[currentLang].hourlyCustomerTrend : translations[currentLang].customerTrendTitle;
@@ -602,8 +693,6 @@
                     const hour = c.time.split(':')[0];
                     if (hour in hourlyAggregated) {
                         hourlyAggregated[hour].sales += c.payment;
-                        // Note: Accurate hourly profit is not possible as cost data is daily.
-                        // We can approximate or just show sales. Let's show sales.
                         hourlyAggregated[hour].customers++;
                         if (c.source === '濱野経由') hourlyAggregated[hour].hamano++;
                         else if (c.repeatSourceCast) hourlyAggregated[hour].repeat++;
@@ -673,7 +762,23 @@
                 acc[type] = (acc[type] || 0) + 1;
                 return acc;
             }, {});
-            renderChart('call-type-chart', 'doughnut', Object.keys(callTypes).map(t => translateData(t)), [{ data: Object.values(callTypes) }], v => `${v}${translations[currentLang].caseSuffix}`);
+            const chartData = {
+                labels: Object.keys(callTypes).map(t => translateData(t)),
+                datasets: [{
+                    data: Object.values(callTypes)
+                }]
+            };
+            const options = {
+                onClick: (evt, elements) => {
+                    if (elements.length > 0) {
+                        const clickedIndex = elements[0].index;
+                        const label = chartData.labels[clickedIndex];
+                        const originalLabel = Object.keys(translations.ja.data).find(key => translations.ja.data[key] === label) || label;
+                        openCallTypeModal(originalLabel);
+                    }
+                }
+            };
+            renderChart('call-type-chart', 'doughnut', chartData.labels, chartData.datasets, v => `${v}${translations[currentLang].caseSuffix}`, false, options);
         }
 
         function createAreaAnalysisSection(data) {
@@ -725,11 +830,11 @@
             </tr>`;
             tableBody.innerHTML = data.map(d => `
                 <tr class="clickable" data-ward-name="${d.area}">
-                    <td class="font-semibold">${translateData(d.area)}</td>
-                    <td>${d.customerCount}</td>
-                    <td>${formatYen(d.avgPayment)}</td>
-                    <td class="accent-text font-bold">${formatPercent(d.optionRate)}</td>
-                    <td class="accent-text font-bold">${formatPercent(d.hamanoRate)}</td>
+                    <td data-label="${translations[currentLang].areaNameCol}" class="font-semibold">${translateData(d.area)}</td>
+                    <td data-label="${translations[currentLang].totalCustomersCol}">${d.customerCount}</td>
+                    <td data-label="${translations[currentLang].avgPaymentCol}">${formatYen(d.avgPayment)}</td>
+                    <td data-label="${translations[currentLang].optionRateCol}" class="accent-text font-bold">${formatPercent(d.optionRate)}</td>
+                    <td data-label="${translations[currentLang].hamanoRateCol}" class="accent-text font-bold">${formatPercent(d.hamanoRate)}</td>
                 </tr>
             `).join('');
         }
@@ -742,15 +847,40 @@
                 const hour = customer.time.split(':')[0];
                 if (hour in hourlyCounts) hourlyCounts[hour]++;
             });
-            renderChart('arrival-time-chart', 'bar', businessHours.map(h => `${h}:00`), [{ label: translations[currentLang].customerCount, data: businessHours.map(h => hourlyCounts[h]), backgroundColor: 'rgba(244, 114, 182, 0.7)' }], val => `${val}${translations[currentLang].peopleSuffix}`);
+            const chartData = {
+                labels: businessHours.map(h => `${h}:00`),
+                datasets: [{ label: translations[currentLang].customerCount, data: businessHours.map(h => hourlyCounts[h]), backgroundColor: 'rgba(244, 114, 182, 0.7)' }]
+            };
+            const options = {
+                onClick: (evt, elements) => {
+                    if (elements.length > 0) {
+                        const clickedIndex = elements[0].index;
+                        const label = chartData.labels[clickedIndex];
+                        openTimeDetailModal(label.split(':')[0]);
+                    }
+                }
+            };
+            renderChart('arrival-time-chart', 'bar', chartData.labels, chartData.datasets, val => `${val}${translations[currentLang].peopleSuffix}`, false, options);
         }
 
         function createSourceRatioChart(data) {
             const sourceCounts = data.reduce((acc, c) => { acc[c.source || '不明'] = (acc[c.source || '不明'] || 0) + 1; return acc; }, {});
             const sortedSources = Object.entries(sourceCounts).sort(([,a],[,b]) => b - a);
-            const labels = sortedSources.map(([source]) => translateData(source));
-            const chartData = sortedSources.map(([,count]) => count);
-            renderChart('source-ratio-chart', 'doughnut', labels, [{ data: chartData }], v => `${v}${translations[currentLang].caseSuffix}`);
+            const chartData = {
+                labels: sortedSources.map(([source]) => translateData(source)),
+                datasets: [{ data: sortedSources.map(([,count]) => count) }]
+            };
+            const options = {
+                onClick: (evt, elements) => {
+                    if (elements.length > 0) {
+                        const clickedIndex = elements[0].index;
+                        const label = chartData.labels[clickedIndex];
+                        const originalLabel = Object.keys(translations[currentLang].data).find(key => translations[currentLang].data[key] === label) || label;
+                        openSourceDetailModal(originalLabel);
+                    }
+                }
+            };
+            renderChart('source-ratio-chart', 'doughnut', chartData.labels, chartData.datasets, v => `${v}${translations[currentLang].caseSuffix}`, false, options);
         }
 
         function createCastPerformanceSection(data) {
@@ -818,23 +948,23 @@
             tableBody.innerHTML = castDataArray.map(stats => {
                 let optionRateDisplay = '';
                 if (stats.customerCount >= 5) {
-                    optionRateDisplay = `<td class="accent-text font-bold">${formatPercent(stats.optionRate)}</td>`;
+                    optionRateDisplay = `<td data-label="${translations[currentLang].optionRateCol}" class="accent-text font-bold">${formatPercent(stats.optionRate)}</td>`;
                 } else {
                     const note = translations[currentLang].optionRateNote.replace('{count}', stats.customerCount);
-                    optionRateDisplay = `<td class="text-red-400 font-bold">${formatPercent(stats.optionRate)} <span class="text-xs">${note}</span></td>`;
+                    optionRateDisplay = `<td data-label="${translations[currentLang].optionRateCol}" class="text-red-400 font-bold">${formatPercent(stats.optionRate)} <span class="text-xs">${note}</span></td>`;
                 }
 
                 return `
                     <tr class="clickable" data-cast-name="${stats.name}">
-                        <td class="font-semibold">${stats.name}</td>
-                        <td>${stats.customerCount}</td>
-                        <td>${formatYen(stats.totalPayout)}</td>
-                        <td>${formatYen(stats.avgPayout)}</td>
-                        <td>${stats.repeatCount}</td>
-                        <td class="accent-text font-bold">${formatPercent(stats.repeatRate)}</td>
+                        <td data-label="${translations[currentLang].castNameCol}" class="font-semibold">${stats.name}</td>
+                        <td data-label="${translations[currentLang].totalCustomersCol}">${stats.customerCount}</td>
+                        <td data-label="${translations[currentLang].totalPayoutCol}">${formatYen(stats.totalPayout)}</td>
+                        <td data-label="${translations[currentLang].avgPayoutCol}">${formatYen(stats.avgPayout)}</td>
+                        <td data-label="${translations[currentLang].repeatCountCol}">${stats.repeatCount}</td>
+                        <td data-label="${translations[currentLang].repeatRateCol}" class="accent-text font-bold">${formatPercent(stats.repeatRate)}</td>
                         ${optionRateDisplay}
-                        <td>${stats.hamanoCustomerCount}</td>
-                        <td class="accent-text font-bold">${formatPercent(stats.hamanoRate)}</td>
+                        <td data-label="${translations[currentLang].hamanoCountCol}">${stats.hamanoCustomerCount}</td>
+                        <td data-label="${translations[currentLang].hamanoRateCol}" class="accent-text font-bold">${formatPercent(stats.hamanoRate)}</td>
                     </tr>`;
             }).join('');
 
@@ -850,7 +980,6 @@
         // --- Race Analysis Table Functions (Refactored) ---
 
         function createRaceAnalysisSection(data, isAnnualView) {
-            // Doughnut chart rendering
             const raceCounts = [...new Set(data.map(c => c.race || '不明'))].map(race => ({ race, count: data.filter(c => (c.race || '不明') === race).length })).sort((a, b) => b.count - a.count);
             renderChart('race-ratio-chart', 'doughnut', raceCounts.map(r => translateData(r.race)), [{ data: raceCounts.map(r => r.count) }], val => `${val}${translations[currentLang].peopleSuffix}`);
 
@@ -863,7 +992,6 @@
                 return acc;
             }, {});
 
-            // Calculate stats and populate the global variable
             currentRaceAnalysisData = Object.entries(dataByLabel).map(([label, groupData]) => {
                 const totalDuration = groupData.reduce((sum, c) => sum + c.duration, 0);
                 const totalPayment = groupData.reduce((sum, c) => sum + c.payment, 0);
@@ -887,7 +1015,6 @@
                 };
             });
             
-            // Render the header (since it can change)
             tableHead.innerHTML = `<tr>
                 <th data-sort="label">${isAnnualView ? translations[currentLang].monthCol : translations[currentLang].raceCol}<span class="sort-arrow"></span></th>
                 <th data-sort="customerCount">${translations[currentLang].totalCustomersCol}<span class="sort-arrow"></span></th>
@@ -900,7 +1027,6 @@
                 <th data-sort="hamanoRate">${translations[currentLang].hamanoRateCol}<span class="sort-arrow"></span></th>
             </tr>`;
 
-            // Initial render of the table
             renderRaceTable();
         }
 
@@ -936,22 +1062,22 @@
                 const formattedLabel = isAnnualView ? translations[currentLang].yearMonth.replace('{year}', stats.label.split('-')[0]).replace('{month}', parseInt(stats.label.split('-')[1], 10)) : translateData(stats.label);
                 let optionRateDisplay = '';
                 if (stats.customerCount >= 5) {
-                    optionRateDisplay = `<td class="accent-text font-bold">${formatPercent(stats.optionRate)}</td>`;
+                    optionRateDisplay = `<td data-label="${translations[currentLang].optionRateCol}" class="accent-text font-bold">${formatPercent(stats.optionRate)}</td>`;
                 } else {
                     const note = translations[currentLang].optionRateNote.replace('{count}', stats.customerCount);
-                    optionRateDisplay = `<td class="text-red-400 font-bold">${formatPercent(stats.optionRate)} <span class="text-xs">${note}</span></td>`;
+                    optionRateDisplay = `<td data-label="${translations[currentLang].optionRateCol}" class="text-red-400 font-bold">${formatPercent(stats.optionRate)} <span class="text-xs">${note}</span></td>`;
                 }
 
                 return `<tr class="clickable" data-label="${stats.label}" data-is-annual="${isAnnualView}">
-                    <td class="font-semibold">${formattedLabel}</td>
-                    <td>${stats.customerCount}</td>
-                    <td>${stats.avgDuration.toFixed(1)}${translations[currentLang].minSuffix}</td>
-                    <td>${formatYen(stats.avgPayment)}</td>
-                    <td>${translateData(stats.topSource)}</td>
-                    <td>${translateData(stats.topOption)}</td>
+                    <td data-label="${isAnnualView ? translations[currentLang].monthCol : translations[currentLang].raceCol}" class="font-semibold">${formattedLabel}</td>
+                    <td data-label="${translations[currentLang].totalCustomersCol}">${stats.customerCount}</td>
+                    <td data-label="${translations[currentLang].avgStayCol}">${stats.avgDuration.toFixed(1)}${translations[currentLang].minSuffix}</td>
+                    <td data-label="${translations[currentLang].avgPaymentCol}">${formatYen(stats.avgPayment)}</td>
+                    <td data-label="${translations[currentLang].topSourceCol}">${translateData(stats.topSource)}</td>
+                    <td data-label="${translations[currentLang].topOptionCol}">${translateData(stats.topOption)}</td>
                     ${optionRateDisplay}
-                    <td>${stats.hamanoCustomerCount}</td>
-                    <td class="accent-text font-bold">${formatPercent(stats.hamanoRate)}</td>
+                    <td data-label="${translations[currentLang].hamanoCountCol}">${stats.hamanoCustomerCount}</td>
+                    <td data-label="${translations[currentLang].hamanoRateCol}" class="accent-text font-bold">${formatPercent(stats.hamanoRate)}</td>
                 </tr>`;
             }).join('');
 
@@ -964,14 +1090,226 @@
             });
         }
         
+        // --- Modal Logic ---
+        function openKpiModal(kpi) {
+            const modal = document.getElementById('kpiDetailModal');
+            const modalTitleEl = document.getElementById('kpi-modal-title');
+            const mainChartTitleEl = document.getElementById('kpi-main-chart-title');
+            const secondaryChartTitleEl = document.getElementById('kpi-secondary-chart-title');
+
+            const isDailyView = document.getElementById('periodSelector').value === 'daily';
+            if (isDailyView) {
+                return; 
+            }
+
+            const kpiKey = `kpi${kpi.charAt(0).toUpperCase() + kpi.slice(1)}`;
+            const kpiName = translations[currentLang][kpiKey] || kpi;
+            modalTitleEl.textContent = translations[currentLang].kpiModalTitle.replace('{kpi}', kpiName);
+            mainChartTitleEl.textContent = translations[currentLang].trendTitle;
+            secondaryChartTitleEl.textContent = translations[currentLang].breakdownTitle;
+            secondaryChartTitleEl.parentElement.style.display = 'flex';
+
+            const isAnnualView = document.getElementById('periodSelector').value === 'all';
+            const keyFn = isAnnualView ? r => { const d = getCorrectDate(r['日付']); return d ? `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}` : null; } : r => r['日付'];
+            const sortFn = isAnnualView ? (a, b) => new Date(a) - new Date(b) : (a, b) => getCorrectDate(a) - getCorrectDate(b);
+
+            const aggregated = currentFilteredOverallData.reduce((acc, row) => {
+                const key = keyFn(row); if (!key) return acc;
+                if (!acc[key]) acc[key] = { sales: 0, profit: 0, cost: 0, customers: 0, duration: 0 };
+                
+                acc[key].sales += parseFloat(String(row['売上合計']).replace(/,/g, '')) || 0;
+                acc[key].profit += parseFloat(String(row['粗利合計']).replace(/,/g, '')) || 0;
+                acc[key].cost += parseFloat(String(row['原価']).replace(/,/g, '')) || 0;
+                acc[key].customers += parseInt(String(row['客数']).replace(/,/g, ''), 10) || 0;
+                return acc;
+            }, {});
+            
+            currentFilteredData.forEach(customer => {
+                 const key = keyFn({ '日付': `${customer.date.getMonth() + 1}/${customer.date.getDate()}` });
+                 if(key && aggregated[key]) {
+                     aggregated[key].duration = (aggregated[key].duration || 0) + customer.duration;
+                 }
+            });
+
+
+            const sortedKeys = Object.keys(aggregated).sort(sortFn);
+            const mainChartLabels = sortedKeys.map(k => {
+                if (isAnnualView) {
+                    const [year, month] = k.split('-');
+                    return translations[currentLang].yearMonth.replace('{year}', year).replace('{month}', parseInt(month, 10));
+                }
+                return k;
+            });
+            
+            let mainChartData, mainChartFormatter, secondaryChartType, secondaryChartLabels, secondaryChartData, secondaryChartFormatter;
+
+            switch (kpi) {
+                case 'sales':
+                case 'profit':
+                case 'cost':
+                    mainChartData = [{ label: kpiName, data: sortedKeys.map(k => aggregated[k][kpi]) }];
+                    mainChartFormatter = formatYen;
+                    
+                    const castBreakdown = currentFilteredData.reduce((acc, c) => {
+                        let value = 0;
+                        if (kpi === 'sales') value = c.payment;
+                        else if (kpi === 'profit') value = c.payment - c.payout;
+                        else if (kpi === 'cost') value = c.payout;
+                        acc[c.castName] = (acc[c.castName] || 0) + value;
+                        return acc;
+                    }, {});
+                    const sortedCast = Object.entries(castBreakdown).sort(([,a],[,b]) => b-a).slice(0, 5);
+                    secondaryChartType = 'doughnut';
+                    secondaryChartLabels = sortedCast.map(([name]) => name || "不明");
+                    secondaryChartData = [{ data: sortedCast.map(([,val]) => val) }];
+                    secondaryChartFormatter = formatYen;
+                    secondaryChartTitleEl.textContent = `${translations[currentLang].breakdownTitle} (${translations[currentLang].castNameCol})`;
+                    break;
+
+                case 'customers':
+                    mainChartData = [{ label: kpiName, data: sortedKeys.map(k => aggregated[k].customers) }];
+                    mainChartFormatter = val => val.toLocaleString();
+
+                    const sourceBreakdown = currentFilteredData.reduce((acc, c) => {
+                        const source = c.source || '不明';
+                        acc[source] = (acc[source] || 0) + 1;
+                        return acc;
+                    }, {});
+                    const sortedSource = Object.entries(sourceBreakdown).sort(([,a],[,b]) => b-a);
+                    secondaryChartType = 'doughnut';
+                    secondaryChartLabels = sortedSource.map(([name]) => translateData(name));
+                    secondaryChartData = [{ data: sortedSource.map(([,val]) => val) }];
+                    secondaryChartFormatter = val => `${val}${translations[currentLang].peopleSuffix}`;
+                    secondaryChartTitleEl.textContent = `${translations[currentLang].breakdownTitle} (${translations[currentLang].sourceTitle})`;
+                    break;
+                
+                case 'marginRate':
+                    mainChartData = [{ label: kpiName, data: sortedKeys.map(k => aggregated[k].sales > 0 ? aggregated[k].profit / aggregated[k].sales : 0) }];
+                    mainChartFormatter = formatPercent;
+                    
+                    const raceMargin = [...new Set(currentFilteredData.map(c => c.race || '不明'))].map(race => {
+                        const raceData = currentFilteredData.filter(c => (c.race || '不明') === race);
+                        const totalSales = raceData.reduce((sum, c) => sum + c.payment, 0);
+                        const totalPayout = raceData.reduce((sum, c) => sum + c.payout, 0);
+                        const profit = totalSales - totalPayout;
+                        return { name: race, value: totalSales > 0 ? profit / totalSales : 0 };
+                    }).sort((a,b) => b.value - a.value);
+                    
+                    secondaryChartType = 'bar';
+                    secondaryChartLabels = raceMargin.map(r => translateData(r.name));
+                    secondaryChartData = [{ label: kpiName, data: raceMargin.map(r => r.value) }];
+                    secondaryChartFormatter = formatPercent;
+                    secondaryChartTitleEl.textContent = `${translations[currentLang].breakdownTitle} (${translations[currentLang].raceCol})`;
+                    break;
+
+                case 'avgSpend':
+                    mainChartData = [{ label: kpiName, data: sortedKeys.map(k => aggregated[k].customers > 0 ? aggregated[k].sales / aggregated[k].customers : 0) }];
+                    mainChartFormatter = formatYen;
+                    
+                    const raceSpend = [...new Set(currentFilteredData.map(c => c.race || '不明'))].map(race => {
+                        const raceData = currentFilteredData.filter(c => (c.race || '不明') === race);
+                        const totalSales = raceData.reduce((sum, c) => sum + c.payment, 0);
+                        return { name: race, value: raceData.length > 0 ? totalSales / raceData.length : 0 };
+                    }).sort((a,b) => b.value - a.value);
+
+                    secondaryChartType = 'bar';
+                    secondaryChartLabels = raceSpend.map(r => translateData(r.name));
+                    secondaryChartData = [{ label: kpiName, data: raceSpend.map(r => r.value) }];
+                    secondaryChartFormatter = formatYen;
+                    secondaryChartTitleEl.textContent = `${translations[currentLang].breakdownTitle} (${translations[currentLang].raceCol})`;
+                    break;
+                
+                case 'avgCustomersPerDay':
+                case 'avgProfitPerDay':
+                case 'avgDurationPerDay':
+                     const dailyDataKey = {
+                         avgCustomersPerDay: 'customers',
+                         avgProfitPerDay: 'profit',
+                         avgDurationPerDay: 'duration'
+                     }[kpi];
+                     mainChartData = [{ label: kpiName, data: sortedKeys.map(k => aggregated[k][dailyDataKey]) }];
+                     mainChartFormatter = {
+                         avgCustomersPerDay: val => val.toLocaleString(),
+                         avgProfitPerDay: formatYen,
+                         avgDurationPerDay: val => `${(val || 0).toFixed(0)}${translations[currentLang].minSuffix}`
+                     }[kpi];
+                     
+                     secondaryChartTitleEl.parentElement.style.display = 'none';
+                     if (window['kpi-secondary-chart_instance']) window['kpi-secondary-chart_instance'].destroy();
+                     secondaryChartData = null;
+                     break;
+
+                default:
+                    return;
+            }
+
+            renderStandardChart('kpi-main-chart', 'bar', mainChartLabels, mainChartData, mainChartFormatter);
+            if (secondaryChartData) {
+                renderChart('kpi-secondary-chart', secondaryChartType, secondaryChartLabels, secondaryChartData, secondaryChartFormatter, secondaryChartType === 'bar');
+            }
+
+            modal.classList.add('visible');
+        }
+
+        function openCallTypeModal(callType) {
+            const modal = document.getElementById('callTypeDetailModal');
+            document.getElementById('call-type-modal-title').textContent = `${translateData(callType)} 詳細分析`;
+            
+            const callTypeData = currentFilteredData.filter(c => (c.callInfo.startsWith('アウトコール') ? 'アウトコール' : 'インコール') === callType);
+
+            const raceCounts = callTypeData.reduce((acc, c) => { acc[c.race || '不明'] = (acc[c.race || '不明'] || 0) + 1; return acc; }, {});
+            const sortedRaces = Object.entries(raceCounts).sort(([,a],[,b]) => b-a);
+            renderChart('call-type-race-chart', 'doughnut', sortedRaces.map(([name]) => translateData(name)), [{ data: sortedRaces.map(([,count]) => count) }], v => `${v}${translations[currentLang].peopleSuffix}`);
+            
+            const sourceCounts = callTypeData.reduce((acc, c) => { acc[c.source || '不明'] = (acc[c.source || '不明'] || 0) + 1; return acc; }, {});
+            const sortedSources = Object.entries(sourceCounts).sort(([,a],[,b]) => b-a);
+            renderChart('call-type-source-chart', 'doughnut', sortedSources.map(([name]) => translateData(name)), [{ data: sortedSources.map(([,count]) => count) }], v => `${v}${translations[currentLang].caseSuffix}`);
+            
+            modal.classList.add('visible');
+        }
+
+        function openTimeDetailModal(hour) {
+            const modal = document.getElementById('timeDetailModal');
+            document.getElementById('time-modal-title').textContent = `${hour}:00 ${translations[currentLang].wardModalTitle}`;
+            
+            const timeData = currentFilteredData.filter(c => c.time.startsWith(hour + ':'));
+            
+            const raceCounts = timeData.reduce((acc, c) => { acc[c.race || '不明'] = (acc[c.race || '不明'] || 0) + 1; return acc; }, {});
+            const sortedRaces = Object.entries(raceCounts).sort(([,a],[,b]) => b-a);
+            renderChart('time-race-chart', 'doughnut', sortedRaces.map(([name]) => translateData(name)), [{ data: sortedRaces.map(([,count]) => count) }], v => `${v}${translations[currentLang].peopleSuffix}`);
+
+            const sourceCounts = timeData.reduce((acc, c) => { acc[c.source || '不明'] = (acc[c.source || '不明'] || 0) + 1; return acc; }, {});
+            const sortedSources = Object.entries(sourceCounts).sort(([,a],[,b]) => b-a);
+            renderChart('time-source-chart', 'doughnut', sortedSources.map(([name]) => translateData(name)), [{ data: sortedSources.map(([,count]) => count) }], v => `${v}${translations[currentLang].caseSuffix}`);
+            
+            modal.classList.add('visible');
+        }
+
+        function openSourceDetailModal(source) {
+            const modal = document.getElementById('sourceDetailModal');
+            document.getElementById('source-modal-title').textContent = `${translateData(source)} ${translations[currentLang].wardModalTitle}`;
+            
+            const sourceData = currentFilteredData.filter(c => (c.source || '不明') === source);
+            
+            const raceCounts = sourceData.reduce((acc, c) => { acc[c.race || '不明'] = (acc[c.race || '不明'] || 0) + 1; return acc; }, {});
+            const sortedRaces = Object.entries(raceCounts).sort(([,a],[,b]) => b-a);
+            renderChart('source-race-chart', 'doughnut', sortedRaces.map(([name]) => translateData(name)), [{ data: sortedRaces.map(([,count]) => count) }], v => `${v}${translations[currentLang].peopleSuffix}`);
+
+            const castCounts = sourceData.reduce((acc, c) => { acc[c.castName || '不明'] = (acc[c.castName || '不明'] || 0) + 1; return acc; }, {});
+            const sortedCasts = Object.entries(castCounts).sort(([,a],[,b]) => b-a).slice(0, 5);
+            renderChart('source-cast-chart', 'bar', sortedCasts.map(([name]) => name), [{ data: sortedCasts.map(([,count]) => count) }], v => `${v}${translations[currentLang].caseSuffix}`, true);
+            
+            modal.classList.add('visible');
+        }
+
         // --- Generic Chart Rendering ---
-        function renderChart(canvasId, type, labels, datasets, formatterFn, isHorizontal = false) {
+        function renderChart(canvasId, type, labels, datasets, formatterFn, isHorizontal = false, customOptions = {}) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             if (window[canvasId + '_instance']) window[canvasId + '_instance'].destroy();
-            const options = { responsive: true, maintainAspectRatio: false, indexAxis: isHorizontal ? 'y' : 'x', plugins: { legend: { display: type === 'doughnut', position: 'bottom', labels: { color: '#fce7f3' } }, tooltip: { callbacks: { label: (context) => { const label = context.dataset.label || context.label || ''; const value = context.raw; if (type === 'doughnut') { const total = context.dataset.data.reduce((a, b) => a + b, 0); const percentage = total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%'; return ` ${label}: ${formatterFn(value)} (${percentage})`; } return ` ${label}: ${formatterFn(value)}`; } } } } };
-            if (type === 'bar' || type === 'line') { options.scales = { x: { ticks: { color: '#fbcfe8', precision: 0 }, grid: { color: 'rgba(244, 114, 182, 0.2)' } }, y: { ticks: { color: '#fce7f3' }, grid: { color: 'rgba(244, 114, 182, 0.2)' } } }; if(isHorizontal || type === 'line') { options.scales.x.beginAtZero = true; } else { options.scales.y.beginAtZero = true; } }
+            const defaultOptions = { responsive: true, maintainAspectRatio: false, indexAxis: isHorizontal ? 'y' : 'x', plugins: { legend: { display: type === 'doughnut', position: 'bottom', labels: { color: '#fce7f3' } }, tooltip: { callbacks: { label: (context) => { const label = context.dataset.label || context.label || ''; const value = context.raw; if (type === 'doughnut') { const total = context.dataset.data.reduce((a, b) => a + b, 0); const percentage = total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%'; return ` ${label}: ${formatterFn(value)} (${percentage})`; } return ` ${label}: ${formatterFn(value)}`; } } } } };
+            if (type === 'bar' || type === 'line') { defaultOptions.scales = { x: { ticks: { color: '#fbcfe8', precision: 0 }, grid: { color: 'rgba(244, 114, 182, 0.2)' } }, y: { ticks: { color: '#fce7f3' }, grid: { color: 'rgba(244, 114, 182, 0.2)' } } }; if(isHorizontal || type === 'line') { defaultOptions.scales.x.beginAtZero = true; } else { defaultOptions.scales.y.beginAtZero = true; } }
             datasets[0].backgroundColor = datasets[0].backgroundColor || PREMIUM_COLORS;
-            window[canvasId + '_instance'] = new Chart(ctx, { type, data: { labels, datasets }, options });
+            window[canvasId + '_instance'] = new Chart(ctx, { type, data: { labels, datasets }, options: {...defaultOptions, ...customOptions} });
         }
         function renderStandardChart(canvasId, type, labels, datasets, formatterFn) { const ctx = document.getElementById(canvasId).getContext('2d'); if (window[canvasId + '_instance']) window[canvasId + '_instance'].destroy(); const isStacked = type === 'bar' && datasets.length > 1; window[canvasId + '_instance'] = new Chart(ctx, { type, data: { labels, datasets }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: isStacked, ticks: { color: '#fbcfe8' }, grid: { color: 'rgba(244, 114, 182, 0.2)' } }, y: { stacked: isStacked, beginAtZero: true, ticks: { callback: v => formatterFn(v), color: '#fbcfe8' }, grid: { color: 'rgba(244, 114, 182, 0.2)' } } }, plugins: { legend: { display: isStacked, position: 'top', labels: { color: '#fce7f3' } }, tooltip: { callbacks: { label: c => ` ${c.dataset.label || ''}: ${formatterFn(c.parsed.y)}` } } } } }); }
         function renderMainChart(labels, datasets) { const canvasId = 'salesTrendChart'; const ctx = document.getElementById(canvasId).getContext('2d'); if (window[canvasId + '_instance']) window[canvasId + '_instance'].destroy(); window[canvasId + '_instance'] = new Chart(ctx, { type: 'bar', data: { labels, datasets }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: false, ticks: { color: '#fbcfe8' }, grid: { color: 'rgba(244, 114, 182, 0.2)' } }, 'y-sales': { type: 'linear', position: 'left', beginAtZero: true, ticks: { callback: v => formatYen(v), color: '#fbcfe8' }, grid: { color: 'rgba(244, 114, 182, 0.2)' } }, 'y-margin': { type: 'linear', position: 'right', beginAtZero: true, ticks: { callback: v => formatPercent(v), color: '#fbcfe8' }, grid: { drawOnChartArea: false } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.dataset.label || ''}: ${c.dataset.yAxisID === 'y-margin' ? formatPercent(c.parsed.y) : formatYen(c.parsed.y)}` } } } } }); }
@@ -979,15 +1317,15 @@
         // --- Language & Event Listeners ---
         const translations = {
             'ja': {
-                mainTitle: "TokyoGirlsHub 総合分析", subTitle: "統合パフォーマンスダッシュボード", refreshBtn: "更新", navAll: "すべて表示", navCustomer: "顧客動向", navCast: "キャスト分析", navRace: "人種別分析", kpiSales: "売上合計", kpiProfit: "粗利合計", kpiCost: "原価合計", kpiCustomers: "客数合計", kpiMarginRate: "粗利率", kpiAvgSpend: "平均客単価", salesTrendTitle: "売上・原価・粗利率 推移", salesLabel: "売上", costLabel: "原価", marginRateLabel: "粗利率", profitTrendTitle: "粗利推移", customerTrendTitle: "客数推移（新規・リピーター）", callTypeTitle: "コール種別 比率", areaMapTitle: "人気配達エリア", areaNameCol: "エリア名", hamanoCountCol: "濱野経由数", arrivalTineTitle: "入客時間帯", sourceRatioTitle: "経由元 比率", castPerfTitle: "キャスト パフォーマンス", kpiTotalPayout: "女子給 合計", kpiAvgPayout: "1人あたり平均女子給", castNameCol: "キャスト名", totalCustomersCol: "総客数", totalPayoutCol: "女子給合計", avgPayoutCol: "客単価女子給", repeatCountCol: "被リピート数", repeatRateCol: "リピート率", raceAnalysisTitle: "人種別 分析", tokyoModalTitle: "東京都内 配達エリア ランキング", wardModalTitle: "詳細分析", totalPaymentCol: "総支払額", avgPaymentCol: "平均支払額", raceRatioTitle: "人種比率", topOptionsTitle: "人気オプション", sourceTitle: "経由元", periodDataTitle: "期間別データ", sourceRankingTitle: "経由元ランキング", topOptionsRankingTitle: "人気オプションランキング", annualData: "年間データ", dailyData: "日別データ", yearMonth: "{year}年{month}月", profitLabel: "粗利", repeatersLabel: "リピーター", newCustomersLabel: "新規顧客", deliveryCount: "配達件数", caseSuffix: "件", selectionCount: "選択回数", timesSuffix: "回", customerCount: "客数", peopleSuffix: "人", monthCol: "月", raceCol: "人種", avgStayCol: "平均滞在時間", topSourceCol: "人気経由元", topOptionCol: "人気オプション", minSuffix: "分", dateCol: "日付", periodCol: "期間", optionRateCol: "オプション付与率", hamanoRateCol: "濱野経由率", hamanoSource: "濱野経由", optionRateNote: "({count}人中)", kpiAvgCustomersPerDay: "客数日数平均", kpiAvgProfitPerDay: "粗利日数平均", kpiAvgDurationPerDay: "分数日数平均", hourlySalesTrend: "時間別 売上推移", hourlyProfitTrend: "時間別 売上推移", hourlyCustomerTrend: "時間別 客数推移",
+                mainTitle: "TokyoGirlsHub 総合分析", subTitle: "統合パフォーマンスダッシュボード", refreshBtn: "更新", navAll: "すべて表示", navCustomer: "顧客動向", navCast: "キャスト分析", navRace: "人種別分析", kpiSales: "売上合計", kpiProfit: "粗利合計", kpiCost: "原価合計", kpiCustomers: "客数合計", kpiMarginRate: "粗利率", kpiAvgSpend: "平均客単価", salesTrendTitle: "売上・原価・粗利率 推移", salesLabel: "売上", costLabel: "原価", marginRateLabel: "粗利率", profitTrendTitle: "粗利推移", customerTrendTitle: "客数推移（新規・リピーター）", callTypeTitle: "コール種別 比率", areaMapTitle: "人気配達エリア", areaNameCol: "エリア名", hamanoCountCol: "濱野経由数", arrivalTineTitle: "入客時間帯", sourceRatioTitle: "経由元 比率", castPerfTitle: "キャスト パフォーマンス", kpiTotalPayout: "女子給 合計", kpiAvgPayout: "1人あたり平均女子給", castNameCol: "キャスト名", totalCustomersCol: "総客数", totalPayoutCol: "女子給合計", avgPayoutCol: "客単価女子給", repeatCountCol: "被リピート数", repeatRateCol: "リピート率", raceAnalysisTitle: "人種別 分析", tokyoModalTitle: "東京都内 配達エリア ランキング", wardModalTitle: "詳細分析", totalPaymentCol: "総支払額", avgPaymentCol: "平均支払額", raceRatioTitle: "人種比率", topOptionsTitle: "人気オプション", sourceTitle: "経由元", periodDataTitle: "期間別データ", sourceRankingTitle: "経由元ランキング", topOptionsRankingTitle: "人気オプションランキング", annualData: "年間データ", dailyData: "日別データ", yearMonth: "{year}年{month}月", profitLabel: "粗利", repeatersLabel: "リピーター", newCustomersLabel: "新規顧客", deliveryCount: "配達件数", caseSuffix: "件", selectionCount: "選択回数", timesSuffix: "回", customerCount: "客数", peopleSuffix: "人", monthCol: "月", raceCol: "人種", avgStayCol: "平均滞在時間", topSourceCol: "人気経由元", topOptionCol: "人気オプション", minSuffix: "分", dateCol: "日付", periodCol: "期間", optionRateCol: "オプション付与率", hamanoRateCol: "濱野経由率", hamanoSource: "濱野経由", optionRateNote: "({count}人中)", kpiAvgCustomersPerDay: "客数日数平均", kpiAvgProfitPerDay: "粗利日数平均", kpiAvgDurationPerDay: "分数日数平均", hourlySalesTrend: "時間別 売上推移", hourlyProfitTrend: "時間別 売上推移", hourlyCustomerTrend: "時間別 客数推移", kpiModalTitle: "{kpi} 詳細分析", trendTitle: "推移", breakdownTitle: "内訳", castRankingTitle: "キャストランキング", loadingData: "データを読み込んでいます...",
                 data: { "日本": "日本", "イラマチオ": "イラマチオ", "インコール": "インコール", "アウトコール": "アウトコール", "不明": "不明", "日本人": "日本人", "中国人": "中国人", "韓国人": "韓国人", "台湾人": "台湾人", "フィリピン人": "フィリピン人", "タイ人": "タイ人", "ベトナム人": "ベトナム人", "その他": "その他", "HP": "HP", "リピ": "リピ", "紹介": "紹介", "X": "X", "Instagram": "Instagram", "TikTok": "TikTok", "オナニー鑑賞": "オナニー鑑賞", "電マ/バイブ": "電マ/バイブ", "聖水": "聖水", "足コキ": "足コキ", "即尺": "即尺", "アナル舐め": "アナル舐め", "パンツ持ち帰り": "パンツ持ち帰り", "パンスト破り": "パンスト破り", "コスプレ": "コスプレ", "ごっくん": "ごっくん", "3P": "3P", "顔射": "顔射", "2回戦(60分限定)": "2回戦(60分限定)", "写真動画撮影": "写真動画撮影", "AF": "AF", "N/A": "該当なし", "千代田区": "千代田区", "中央区": "中央区", "港区": "港区", "新宿区": "新宿区", "文京区": "文京区", "台東区": "台東区", "墨田区": "墨田区", "江東区": "江東区", "品川区": "品川区", "目黒区": "目黒区", "大田区": "大田区", "世田谷区": "世田谷区", "渋谷区": "渋谷区", "中野区": "中野区", "杉並区": "杉並区", "豊島区": "豊島区", "北区": "北区", "荒川区": "荒川区", "板橋区": "板橋区", "練馬区": "練馬区", "足立区": "足立区", "葛飾区": "葛飾区", "江戸川区": "江戸川区", "アメリカ": "アメリカ", "イギリス": "イギリス", "カナダ": "カナダ", "シンガポール": "シンガポール", "メキシコ": "メキシコ", "ヨーロッパ系": "ヨーロッパ系", "中東系": "中東系", "香港": "香港", "外販": "外販", "Web予約": "Web予約", "Echoさん経由": "Echoさん経由", "該当なし": "該当なし", "中国": "中国", "韓国": "韓国", "台湾": "台湾", "姫予約": "姫予約", "渡邊さん経由": "渡邊さん経由", "渡辺さん経由": "渡辺さん経由", "飛び込み": "飛び込み", "マイ客": "マイ客", "濱野マイ客": "濱野マイ客", "カイマイ客": "カイマイ客", "マーカスマイ客": "マーカスマイ客", "香港Discord": "香港Discord", "リピーター": "リピーター", "濱野マイ客紹介": "濱野マイ客紹介", "濱野引き": "濱野引き", "渡辺さんマイ客": "渡辺さんマイ客", "ロシア": "ロシア", "インド": "インド", "タイ": "タイ", "ドバイ": "ドバイ", "トルコ": "トルコ", "濱野経由": "濱野経由" }
             },
             'en': {
-                mainTitle: "TokyoGirlsHub Comprehensive Analysis", subTitle: "Integrated Performance Dashboard", refreshBtn: "Refresh", navAll: "Show All", navCustomer: "Customer Trends", navCast: "Cast Analysis", navRace: "Race Analysis", kpiSales: "Total Sales", kpiProfit: "Total Profit", kpiCost: "Total Cost", kpiCustomers: "Total Customers", kpiMarginRate: "Profit Margin", kpiAvgSpend: "Avg. Spend", salesTrendTitle: "Sales, Cost & Margin Rate Trend", salesLabel: "Sales", costLabel: "Cost", marginRateLabel: "Margin %", profitTrendTitle: "Profit Trend", customerTrendTitle: "Customer Trend (New/Repeat)", callTypeTitle: "Call Type Ratio", areaMapTitle: "Popular Delivery Areas", areaNameCol: "Area", hamanoCountCol: "Via Hamano Count", arrivalTineTitle: "Peak Hours", sourceRatioTitle: "Source Ratio", castPerfTitle: "Cast Performance", kpiTotalPayout: "Total Payout", kpiAvgPayout: "Avg. Payout per Person", castNameCol: "Cast Name", totalCustomersCol: "Total Customers", totalPayoutCol: "Total Payout", avgPayoutCol: "Avg. Payout/Customer", repeatCountCol: "Repeat Count", repeatRateCol: "Repeat Rate", raceAnalysisTitle: "Analysis by Race", tokyoModalTitle: "Tokyo Ward Delivery Ranking", wardModalTitle: "Detailed Analysis", totalPaymentCol: "Total Payment", avgPaymentCol: "Avg. Payment", raceRatioTitle: "Race Ratio", topOptionsTitle: "Top Options", sourceTitle: "Source", periodDataTitle: "Data by Period", sourceRankingTitle: "Source Ranking", topOptionsRankingTitle: "Top Options Ranking", annualData: "Annual Data", dailyData: "Daily Data", yearMonth: "{month}/{year}", profitLabel: "Profit", repeatersLabel: "Repeaters", newCustomersLabel: "New Customers", deliveryCount: "Deliveries", caseSuffix: " cases", selectionCount: "Selections", timesSuffix: " times", customerCount: "Customers", peopleSuffix: " people", monthCol: "Month", raceCol: "Race", avgStayCol: "Avg. Stay", topSourceCol: "Top Source", topOptionCol: "Top Option", minSuffix: " min", dateCol: "Date", periodCol: "Period", optionRateCol: "Option Rate", hamanoRateCol: "% Via Hamano", hamanoSource: "Via Hamano", optionRateNote: "(out of {count})", kpiAvgCustomersPerDay: "Avg Customers/Day", kpiAvgProfitPerDay: "Avg Profit/Day", kpiAvgDurationPerDay: "Avg Minutes/Day", hourlySalesTrend: "Hourly Sales Trend", hourlyProfitTrend: "Hourly Sales Trend", hourlyCustomerTrend: "Hourly Customer Trend",
+                mainTitle: "TokyoGirlsHub Comprehensive Analysis", subTitle: "Integrated Performance Dashboard", refreshBtn: "Refresh", navAll: "Show All", navCustomer: "Customer Trends", navCast: "Cast Analysis", navRace: "Race Analysis", kpiSales: "Total Sales", kpiProfit: "Total Profit", kpiCost: "Total Cost", kpiCustomers: "Total Customers", kpiMarginRate: "Profit Margin", kpiAvgSpend: "Avg. Spend", salesTrendTitle: "Sales, Cost & Margin Rate Trend", salesLabel: "Sales", costLabel: "Cost", marginRateLabel: "Margin %", profitTrendTitle: "Profit Trend", customerTrendTitle: "Customer Trend (New/Repeat)", callTypeTitle: "Call Type Ratio", areaMapTitle: "Popular Delivery Areas", areaNameCol: "Area", hamanoCountCol: "Via Hamano Count", arrivalTineTitle: "Peak Hours", sourceRatioTitle: "Source Ratio", castPerfTitle: "Cast Performance", kpiTotalPayout: "Total Payout", kpiAvgPayout: "Avg. Payout per Person", castNameCol: "Cast Name", totalCustomersCol: "Total Customers", totalPayoutCol: "Total Payout", avgPayoutCol: "Avg. Payout/Customer", repeatCountCol: "Repeat Count", repeatRateCol: "Repeat Rate", raceAnalysisTitle: "Analysis by Race", tokyoModalTitle: "Tokyo Ward Delivery Ranking", wardModalTitle: "Detailed Analysis", totalPaymentCol: "Total Payment", avgPaymentCol: "Avg. Payment", raceRatioTitle: "Race Ratio", topOptionsTitle: "Top Options", sourceTitle: "Source", periodDataTitle: "Data by Period", sourceRankingTitle: "Source Ranking", topOptionsRankingTitle: "Top Options Ranking", annualData: "Annual Data", dailyData: "Daily Data", yearMonth: "{month}/{year}", profitLabel: "Profit", repeatersLabel: "Repeaters", newCustomersLabel: "New Customers", deliveryCount: "Deliveries", caseSuffix: " cases", selectionCount: "Selections", timesSuffix: " times", customerCount: "Customers", peopleSuffix: " people", monthCol: "Month", raceCol: "Race", avgStayCol: "Avg. Stay", topSourceCol: "Top Source", topOptionCol: "Top Option", minSuffix: " min", dateCol: "Date", periodCol: "Period", optionRateCol: "Option Rate", hamanoRateCol: "% Via Hamano", hamanoSource: "Via Hamano", optionRateNote: "(out of {count})", kpiAvgCustomersPerDay: "Avg Customers/Day", kpiAvgProfitPerDay: "Avg Profit/Day", kpiAvgDurationPerDay: "Avg Minutes/Day", hourlySalesTrend: "Hourly Sales Trend", hourlyProfitTrend: "Hourly Sales Trend", hourlyCustomerTrend: "Hourly Customer Trend", kpiModalTitle: "{kpi} Detailed Analysis", trendTitle: "Trend", breakdownTitle: "Breakdown", castRankingTitle: "Cast Ranking", loadingData: "Loading data...",
                 data: { "日本": "Japan", "イラマチオ": "Deep Throat", "インコール": "In-call", "アウトコール": "Out-call", "不明": "Unknown", "日本人": "Japanese", "中国人": "Chinese", "韓国人": "Korean", "台湾人": "Taiwanese", "フィリピン人": "Filipino", "タイ人": "Thai", "ベトナム人": "Vietnamese", "その他": "Other", "HP": "HP", "リピ": "Repeat", "紹介": "Referral", "X": "X", "Instagram": "Instagram", "TikTok": "TikTok", "オナニー鑑賞": "Viewing", "電マ/バイブ": "Vibrator", "聖水": "Watersports", "足コキ": "Foot Job", "即尺": "Quick Fellatio", "アナル舐め": "Rimming", "パンツ持ち帰り": "Panty Take-home", "パンスト破り": "Stocking Ripping", "コスプレ": "Cosplay", "ごっくん": "Swallowing", "3P": "Threesome", "顔射": "Facial", "2回戦(60分限定)": "2nd Round (60min)", "写真動画撮影": "Photo/Video", "AF": "AF", "N/A": "N/A", "千代田区": "Chiyoda", "中央区": "Chuo", "港区": "Minato", "新宿区": "Shinjuku", "文京区": "Bunkyo", "台東区": "Taito", "墨田区": "Sumida", "江東区": "Koto", "品川区": "Shinagawa", "目黒区": "Meguro", "大田区": "Ota", "世田谷区": "Setagaya", "渋谷区": "Shibuya", "中野区": "Nakano", "杉並区": "Suginami", "豊島区": "Toshima", "北区": "Kita", "荒川区": "Arakawa", "板橋区": "Itabashi", "練馬区": "Nerima", "足立区": "Adachi", "葛飾区": "Katsushika", "江戸川区": "Edogawa", "アメリカ": "America", "イギリス": "UK", "カナダ": "Canada", "シンガポール": "Singapore", "メキシコ": "Mexico", "ヨーロッパ系": "European", "中東系": "Middle Eastern", "香港": "Hong Kong", "外販": "External Sales", "Web予約": "Web Booking", "Echoさん経由": "Via Echo", "該当なし": "N/A", "中国": "China", "韓国": "Korea", "台湾": "Taiwan", "姫予約": "Hime Booking", "渡邊さん経由": "Via Watanabe", "渡辺さん経由": "Via Watanabe", "飛び込み": "Walk-in", "マイ客": "Personal Client", "濱野マイ客": "Hamano's Customer", "カイマイ客": "Kai's Customer", "マーカスマイ客": "Marcus's Customer", "香港Discord": "HK Discord", "リピーター": "Repeater", "濱野マイ客紹介": "Hamano's Customer Referral", "濱野引き": "Brought by Hamano", "渡辺さんマイ客": "Watanabe's Customer", "ロシア": "Russia", "インド": "India", "タイ": "Thailand", "ドバイ": "Dubai", "トルコ": "Turkey", "濱野経由": "Via Hamano" }
             },
             'zh-HK': {
-                mainTitle: "TokyoGirlsHub 綜合分析", subTitle: "綜合表現儀表板", refreshBtn: "刷新", navAll: "顯示全部", navCustomer: "顧客趨勢", navCast: "演員分析", navRace: "種族分析", kpiSales: "總銷售額", kpiProfit: "總利潤", kpiCost: "總成本", kpiCustomers: "總顧客數", kpiMarginRate: "利潤率", kpiAvgSpend: "平均消費", salesTrendTitle: "銷售、成本及利潤率趨勢", salesLabel: "銷售額", costLabel: "成本", marginRateLabel: "利潤率", profitTrendTitle: "利潤趨勢", customerTrendTitle: "顧客趨勢（新客/熟客）", callTypeTitle: "來電類型比例", areaMapTitle: "熱門配送區域", areaNameCol: "區域", hamanoCountCol: "經由濱野數", arrivalTineTitle: "高峰時段", sourceRatioTitle: "來源比例", castPerfTitle: "演員表現", kpiTotalPayout: "總支付額", kpiAvgPayout: "人均支付額", castNameCol: "演員名稱", totalCustomersCol: "總顧客數", totalPayoutCol: "總支付額", avgPayoutCol: "每客平均支付", repeatCountCol: "回頭客次數", repeatRateCol: "回頭率", raceAnalysisTitle: "按種族分析", tokyoModalTitle: "東京區內配送排名", wardModalTitle: "詳細分析", totalPaymentCol: "總支付額", avgPaymentCol: "平均支付額", raceRatioTitle: "種族比例", topOptionsTitle: "熱門選項", sourceTitle: "來源", periodDataTitle: "按時期數據", sourceRankingTitle: "來源排名", topOptionsRankingTitle: "熱門選項排名", annualData: "年度數據", dailyData: "每日數據", yearMonth: "{year}年{month}月", profitLabel: "利潤", repeatersLabel: "熟客", newCustomersLabel: "新客", deliveryCount: "配送次數", caseSuffix: "次", selectionCount: "選擇次數", timesSuffix: "次", customerCount: "顧客數", peopleSuffix: "人", monthCol: "月份", raceCol: "種族", avgStayCol: "平均逗留時間", topSourceCol: "熱門來源", topOptionCol: "熱門選項", minSuffix: "分鐘", dateCol: "日期", periodCol: "期間", optionRateCol: "選項附加率", hamanoRateCol: "經由濱野%", hamanoSource: "經由濱野", optionRateNote: "({count}人中)", kpiAvgCustomersPerDay: "每日平均客數", kpiAvgProfitPerDay: "每日平均利潤", kpiAvgDurationPerDay: "每日平均分鐘數", hourlySalesTrend: "每小時銷售趨勢", hourlyProfitTrend: "每小時銷售趨勢", hourlyCustomerTrend: "每小時顧客趨勢",
+                mainTitle: "TokyoGirlsHub 綜合分析", subTitle: "綜合表現儀表板", refreshBtn: "刷新", navAll: "顯示全部", navCustomer: "顧客趨勢", navCast: "演員分析", navRace: "種族分析", kpiSales: "總銷售額", kpiProfit: "總利潤", kpiCost: "總成本", kpiCustomers: "總顧客數", kpiMarginRate: "利潤率", kpiAvgSpend: "平均消費", salesTrendTitle: "銷售、成本及利潤率趨勢", salesLabel: "銷售額", costLabel: "成本", marginRateLabel: "利潤率", profitTrendTitle: "利潤趨勢", customerTrendTitle: "顧客趨勢（新客/熟客）", callTypeTitle: "來電類型比例", areaMapTitle: "熱門配送區域", areaNameCol: "區域", hamanoCountCol: "經由濱野數", arrivalTineTitle: "高峰時段", sourceRatioTitle: "來源比例", castPerfTitle: "演員表現", kpiTotalPayout: "總支付額", kpiAvgPayout: "人均支付額", castNameCol: "演員名稱", totalCustomersCol: "總顧客數", totalPayoutCol: "總支付額", avgPayoutCol: "每客平均支付", repeatCountCol: "回頭客次數", repeatRateCol: "回頭率", raceAnalysisTitle: "按種族分析", tokyoModalTitle: "東京區內配送排名", wardModalTitle: "詳細分析", totalPaymentCol: "總支付額", avgPaymentCol: "平均支付額", raceRatioTitle: "種族比例", topOptionsTitle: "熱門選項", sourceTitle: "來源", periodDataTitle: "按時期數據", sourceRankingTitle: "來源排名", topOptionsRankingTitle: "熱門選項排名", annualData: "年度數據", dailyData: "每日數據", yearMonth: "{year}年{month}月", profitLabel: "利潤", repeatersLabel: "熟客", newCustomersLabel: "新客", deliveryCount: "配送次數", caseSuffix: "次", selectionCount: "選擇次數", timesSuffix: "次", customerCount: "顧客數", peopleSuffix: "人", monthCol: "月份", raceCol: "種族", avgStayCol: "平均逗留時間", topSourceCol: "熱門來源", topOptionCol: "熱門選項", minSuffix: "分鐘", dateCol: "日期", periodCol: "期間", optionRateCol: "選項附加率", hamanoRateCol: "經由濱野%", hamanoSource: "經由濱野", optionRateNote: "({count}人中)", kpiAvgCustomersPerDay: "每日平均客數", kpiAvgProfitPerDay: "每日平均利潤", kpiAvgDurationPerDay: "每日平均分鐘數", hourlySalesTrend: "每小時銷售趨勢", hourlyProfitTrend: "每小時銷售趨勢", hourlyCustomerTrend: "每小時顧客趨勢", kpiModalTitle: "{kpi} 詳細分析", trendTitle: "趨勢", breakdownTitle: "細項", castRankingTitle: "演員排名", loadingData: "正在加載數據...",
                 data: { "日本": "日本", "イラマチオ": "深喉", "インコール": "內線電話", "アウトコール": "外線電話", "不明": "未知", "日本人": "日本人", "中国人": "中國人", "韓国人": "韓國人", "台湾人": "台灣人", "フィリピン人": "菲律賓人", "タイ人": "泰國人", "ベトナム人": "越南人", "その他": "其他", "HP": "HP", "リピ": "回頭客", "介紹": "介紹", "X": "X", "Instagram": "Instagram", "TikTok": "TikTok", "オナニー鑑賞": "觀賞", "電マ/バイブ": "按摩器", "聖水": "聖水", "足コキ": "足交", "即尺": "即刻口交", "アナル舐め": "舔肛", "パンツ持ち帰り": "內褲帶走", "パンスト破り": "撕破絲襪", "コスプレ": "角色扮演", "ごっくん": "吞嚥", "3P": "3P", "顔射": "顏射", "2回戦(60分限定)": "第二回合 (60分鐘)", "写真動画撮影": "拍照錄影", "AF": "AF", "N/A": "無", "千代田区": "千代田區", "中央区": "中央區", "港区": "港區", "新宿区": "新宿區", "文京区": "文京區", "台東区": "台東區", "墨田区": "墨田區", "江東区": "江東區", "品川区": "品川區", "目黒区": "目黑區", "大田区": "大田區", "世田谷区": "世田谷區", "渋谷区": "澀谷區", "中野区": "中野區", "杉並区": "杉並區", "豊島区": "豐島區", "北区": "北區", "荒川区": "荒川區", "板橋区": "板橋區", "練馬区": "練馬區", "足立区": "足立區", "葛飾区": "葛飾區", "江戸川区": "江戶川區", "アメリカ": "美國", "イギリス": "英國", "カナダ": "加拿大", "シンガポール": "新加坡", "メキシコ": "墨西哥", "ヨーロッパ系": "歐洲裔", "中東系": "中東裔", "香港": "香港", "外販": "外部銷售", "Web予約": "網上預約", "Echoさん経由": "經由Echo", "該当なし": "無", "中国": "中國", "韓国": "韓國", "台湾": "台灣", "姫予約": "公主預約", "渡邊さん経由": "經由渡邊", "渡辺さん経由": "經由渡邊", "飛び込み": "街客", "マイ客": "私人客戶", "濱野マイ客": "濱野的私人客戶", "カイマイ客": "Kai的私人客戶", "マーカスマイ客": "Marcus的私人客戶", "香港Discord": "香港Discord", "リピーター": "回頭客", "濱野マイ客紹介": "濱野的客戶介紹", "濱野引き": "由濱野帶來", "渡邊的私人客戶": "渡邊的私人客戶", "ロシア": "俄羅斯", "インド": "印度", "タイ": "泰國", "ドバイ": "杜拜", "トルコ": "土耳其", "濱野経由": "經由濱野" }
             }
         };
@@ -1050,6 +1388,10 @@
                     if (modal.id === 'ward-detail-modal') ['ward-race-chart', 'ward-options-chart', 'ward-source-chart'].forEach(id => { if(window[id+'_instance']) window[id+'_instance'].destroy(); });
                     if (modal.id === 'castDetailModal') { if(window['cast-options-chart_instance']) window['cast-options-chart_instance'].destroy(); }
                     if (modal.id === 'raceDetailModal') { if(window['race-source-chart_instance']) window['race-source-chart_instance'].destroy(); if(window['race-options-chart_instance']) window['race-options-chart_instance'].destroy(); }
+                    if (modal.id === 'kpiDetailModal') { if(window['kpi-main-chart_instance']) window['kpi-main-chart_instance'].destroy(); if(window['kpi-secondary-chart_instance']) window['kpi-secondary-chart_instance'].destroy(); }
+                    if (modal.id === 'callTypeDetailModal') { if(window['call-type-race-chart_instance']) window['call-type-race-chart_instance'].destroy(); if(window['call-type-source-chart_instance']) window['call-type-source-chart_instance'].destroy(); }
+                    if (modal.id === 'timeDetailModal') { if(window['time-race-chart_instance']) window['time-race-chart_instance'].destroy(); if(window['time-source-chart_instance']) window['time-source-chart_instance'].destroy(); }
+                    if (modal.id === 'sourceDetailModal') { if(window['source-race-chart_instance']) window['source-race-chart_instance'].destroy(); if(window['source-cast-chart_instance']) window['source-cast-chart_instance'].destroy(); }
                 });
             });
 
@@ -1167,6 +1509,41 @@
                     }
 
                     document.getElementById('raceDetailModal').classList.add('visible');
+                }
+            });
+            
+            document.getElementById('performance-overview').addEventListener('click', e => {
+                const kpiCard = e.target.closest('.kpi-card');
+                if (kpiCard && kpiCard.dataset.kpi) {
+                    openKpiModal(kpiCard.dataset.kpi);
+                }
+            });
+            
+            document.getElementById('area-details-table-body').addEventListener('click', e => {
+                const row = e.target.closest('tr');
+                if (row && row.dataset.wardName) {
+                    const wardName = row.dataset.wardName;
+                    const wardData = currentFilteredData.filter(c => c.callInfo.includes(wardName));
+                    
+                    document.getElementById('ward-modal-name').textContent = translateData(wardName);
+                    
+                    const totalCustomers = wardData.length;
+                    const totalPayment = wardData.reduce((sum, c) => sum + c.payment, 0);
+                    document.getElementById('ward-kpi-customers').textContent = totalCustomers;
+                    document.getElementById('ward-kpi-payment').textContent = formatYen(totalPayment);
+                    document.getElementById('ward-kpi-avg-payment').textContent = formatYen(totalCustomers > 0 ? totalPayment / totalCustomers : 0);
+                    
+                    const raceCounts = wardData.reduce((acc, c) => { acc[c.race || '不明'] = (acc[c.race || '不明'] || 0) + 1; return acc; }, {});
+                    renderChart('ward-race-chart', 'doughnut', Object.keys(raceCounts).map(r => translateData(r)), [{ data: Object.values(raceCounts) }], v => `${v}${translations[currentLang].peopleSuffix}`);
+                    
+                    const optionsCount = wardData.flatMap(c => c.options).reduce((acc, opt) => { acc[opt] = (acc[opt] || 0) + 1; return acc; }, {});
+                    const sortedOptions = Object.entries(optionsCount).sort(([,a],[,b]) => b-a).slice(0, 5);
+                    renderChart('ward-options-chart', 'doughnut', sortedOptions.map(([opt]) => translateData(opt)), [{ data: sortedOptions.map(([,count]) => count) }], v => `${v}${translations[currentLang].timesSuffix}`);
+                    
+                    const sourceCounts = wardData.reduce((acc, c) => { acc[c.source || '不明'] = (acc[c.source || '不明'] || 0) + 1; return acc; }, {});
+                    renderChart('ward-source-chart', 'doughnut', Object.keys(sourceCounts).map(s => translateData(s)), [{ data: Object.values(sourceCounts) }], v => `${v}${translations[currentLang].caseSuffix}`);
+                    
+                    document.getElementById('ward-detail-modal').classList.add('visible');
                 }
             });
 
